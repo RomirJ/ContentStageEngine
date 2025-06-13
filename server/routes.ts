@@ -734,6 +734,168 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Content generation routes
+  app.post('/api/content/blog/:uploadId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { uploadId } = req.params;
+      const { topic, keywords } = req.body;
+      
+      const { contentGenerators } = await import('./contentGenerators');
+      const segments = await storage.getSegmentsByUploadId(uploadId);
+      const blog = await contentGenerators.generateSEOBlog(segments, topic, keywords || []);
+      
+      res.json(blog);
+    } catch (error) {
+      console.error('Error generating SEO blog:', error);
+      res.status(500).json({ message: 'Failed to generate SEO blog' });
+    }
+  });
+
+  app.post('/api/content/newsletter/:uploadId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { uploadId } = req.params;
+      const { brandName, audienceType } = req.body;
+      
+      const { contentGenerators } = await import('./contentGenerators');
+      const segments = await storage.getSegmentsByUploadId(uploadId);
+      const newsletter = await contentGenerators.generateNewsletter(segments, brandName, audienceType);
+      
+      res.json(newsletter);
+    } catch (error) {
+      console.error('Error generating newsletter:', error);
+      res.status(500).json({ message: 'Failed to generate newsletter' });
+    }
+  });
+
+  app.post('/api/content/thumbnail/:segmentId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { segmentId } = req.params;
+      const { templateId } = req.body;
+      
+      const { contentGenerators } = await import('./contentGenerators');
+      const segments = await storage.getSegmentsByUploadId(segmentId);
+      const segment = segments.find(s => s.id === segmentId) || segments[0];
+      
+      if (!segment) {
+        return res.status(404).json({ message: 'Segment not found' });
+      }
+      
+      const thumbnail = await contentGenerators.generateThumbnail(segment, templateId);
+      res.json(thumbnail);
+    } catch (error) {
+      console.error('Error generating thumbnail:', error);
+      res.status(500).json({ message: 'Failed to generate thumbnail' });
+    }
+  });
+
+  app.get('/api/content/thumbnail/templates', isAuthenticated, async (req: any, res) => {
+    try {
+      const { contentGenerators } = await import('./contentGenerators');
+      const templates = await contentGenerators.getThumbnailTemplates();
+      
+      res.json(templates);
+    } catch (error) {
+      console.error('Error fetching thumbnail templates:', error);
+      res.status(500).json({ message: 'Failed to fetch thumbnail templates' });
+    }
+  });
+
+  app.post('/api/content/process/:uploadId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { uploadId } = req.params;
+      
+      const { contentGenerators } = await import('./contentGenerators');
+      const content = await contentGenerators.processSegmentsForContent(uploadId);
+      
+      res.json(content);
+    } catch (error) {
+      console.error('Error processing content:', error);
+      res.status(500).json({ message: 'Failed to process content' });
+    }
+  });
+
+  // Enhanced analytics routes
+  app.get('/api/analytics/heatmap/:segmentId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { segmentId } = req.params;
+      
+      const { enhancedAnalyticsService } = await import('./enhancedAnalytics');
+      const heatMap = await enhancedAnalyticsService.generateClipHeatMap(segmentId);
+      
+      res.json(heatMap);
+    } catch (error) {
+      console.error('Error generating heat map:', error);
+      res.status(500).json({ message: 'Failed to generate heat map' });
+    }
+  });
+
+  app.get('/api/analytics/digest/weekly', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { weekStart } = req.query;
+      const weekStartDate = weekStart ? new Date(weekStart as string) : new Date();
+      
+      const { enhancedAnalyticsService } = await import('./enhancedAnalytics');
+      const digest = await enhancedAnalyticsService.generateWeeklyDigest(userId, weekStartDate);
+      
+      res.json(digest);
+    } catch (error) {
+      console.error('Error generating weekly digest:', error);
+      res.status(500).json({ message: 'Failed to generate weekly digest' });
+    }
+  });
+
+  app.get('/api/analytics/export/:type', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { type } = req.params;
+      const { startDate, endDate } = req.query;
+      
+      const dateRange = {
+        start: startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        end: endDate ? new Date(endDate as string) : new Date()
+      };
+      
+      const { enhancedAnalyticsService } = await import('./enhancedAnalytics');
+      const exportData = await enhancedAnalyticsService.exportToCSV(userId, type as any, dateRange);
+      
+      res.json(exportData);
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      res.status(500).json({ message: 'Failed to export data' });
+    }
+  });
+
+  app.get('/api/analytics/report/pdf', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { weekStart } = req.query;
+      const weekStartDate = weekStart ? new Date(weekStart as string) : new Date();
+      
+      const { enhancedAnalyticsService } = await import('./enhancedAnalytics');
+      const pdfReport = await enhancedAnalyticsService.generatePDFReport(userId, weekStartDate);
+      
+      res.json(pdfReport);
+    } catch (error) {
+      console.error('Error generating PDF report:', error);
+      res.status(500).json({ message: 'Failed to generate PDF report' });
+    }
+  });
+
+  app.get('/api/analytics/heatmaps', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const { enhancedAnalyticsService } = await import('./enhancedAnalytics');
+      const heatMaps = await enhancedAnalyticsService.getClipHeatMaps(userId);
+      
+      res.json(heatMaps);
+    } catch (error) {
+      console.error('Error fetching heat maps:', error);
+      res.status(500).json({ message: 'Failed to fetch heat maps' });
+    }
+  });
+
   // Social posts routes
   app.get('/api/uploads/:id/social-posts', isAuthenticated, async (req: any, res) => {
     try {
