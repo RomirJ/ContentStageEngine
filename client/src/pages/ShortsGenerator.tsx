@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { Navigation } from '@/components/Navigation';
 import { apiRequest } from '@/lib/queryClient';
 import { Video, Download, Clock, FileVideo, Settings } from 'lucide-react';
 
@@ -105,9 +106,9 @@ export default function ShortsGenerator() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      <Navigation title="Vertical Shorts Generator" />
       <div className="flex items-center gap-2 mb-6">
         <Video className="h-6 w-6" />
-        <h1 className="text-2xl font-bold">Vertical Shorts Generator</h1>
       </div>
 
       {/* Upload Selection */}

@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Navigation } from '@/components/Navigation';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { 
   MessageCircle, 
@@ -157,9 +158,9 @@ export default function Engagement() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      <Navigation title="Engagement Dashboard" />
       <div className="flex items-center gap-2 mb-6">
         <MessageCircle className="h-6 w-6" />
-        <h1 className="text-2xl font-bold">Engagement Dashboard</h1>
       </div>
 
       {/* Real-time Digest */}

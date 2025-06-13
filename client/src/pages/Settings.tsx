@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import WorkspaceManager from "@/components/WorkspaceManager";
 import QuoteGraphicsGenerator from "@/components/QuoteGraphicsGenerator";
+import { Navigation } from "@/components/Navigation";
 import { Settings as SettingsIcon, Globe, Image, Users, CreditCard } from "lucide-react";
 
 export default function Settings() {
@@ -13,10 +14,7 @@ export default function Settings() {
         <div className="flex-1 flex flex-col">
           {/* Header */}
           <div className="bg-white border-b border-gray-200 px-6 py-4">
-            <div className="flex items-center gap-3">
-              <SettingsIcon className="h-6 w-6" />
-              <h1 className="text-2xl font-bold">Settings</h1>
-            </div>
+            <Navigation title="Settings" />
           </div>
 
           {/* Main Content */}
