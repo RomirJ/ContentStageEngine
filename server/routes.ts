@@ -349,6 +349,134 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Monetization routes
+  app.get('/api/monetization/dashboard', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const { monetizationService } = await import('./monetizationService');
+      const dashboard = await monetizationService.getMonetizationDashboard(userId);
+      
+      res.json(dashboard);
+    } catch (error) {
+      console.error('Error fetching monetization dashboard:', error);
+      res.status(500).json({ message: 'Failed to fetch monetization dashboard' });
+    }
+  });
+
+  app.get('/api/monetization/revenue', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { days = 30 } = req.query;
+      
+      const { monetizationService } = await import('./monetizationService');
+      const report = await monetizationService.getRevenueReport(userId, parseInt(days as string));
+      
+      res.json(report);
+    } catch (error) {
+      console.error('Error fetching revenue report:', error);
+      res.status(500).json({ message: 'Failed to fetch revenue report' });
+    }
+  });
+
+  app.post('/api/monetization/sync', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const { monetizationService } = await import('./monetizationService');
+      await monetizationService.syncRevenueData(userId);
+      
+      res.json({ success: true, message: 'Revenue data synced successfully' });
+    } catch (error) {
+      console.error('Error syncing revenue data:', error);
+      res.status(500).json({ message: 'Failed to sync revenue data' });
+    }
+  });
+
+  app.post('/api/monetization/prospects/search', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const { monetizationService } = await import('./monetizationService');
+      const prospects = await monetizationService.findSponsorshipProspects(userId);
+      
+      res.json(prospects);
+    } catch (error) {
+      console.error('Error searching prospects:', error);
+      res.status(500).json({ message: 'Failed to search prospects' });
+    }
+  });
+
+  app.post('/api/monetization/prospects/:id/outreach', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      
+      const { monetizationService } = await import('./monetizationService');
+      const outreach = await monetizationService.generateSponsorshipOutreach(id, userId);
+      
+      res.json(outreach);
+    } catch (error) {
+      console.error('Error generating outreach:', error);
+      res.status(500).json({ message: 'Failed to generate outreach' });
+    }
+  });
+
+  app.patch('/api/monetization/prospects/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { status, notes } = req.body;
+      
+      const { monetizationService } = await import('./monetizationService');
+      await monetizationService.updateProspectStatus(id, status, notes);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error updating prospect:', error);
+      res.status(500).json({ message: 'Failed to update prospect' });
+    }
+  });
+
+  app.post('/api/monetization/cta', isAuthenticated, async (req: any, res) => {
+    try {
+      const ctaConfig = req.body;
+      
+      const { monetizationService } = await import('./monetizationService');
+      await monetizationService.setupCTA(ctaConfig);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error setting up CTA:', error);
+      res.status(500).json({ message: 'Failed to setup CTA' });
+    }
+  });
+
+  app.get('/api/monetization/cta/performance', isAuthenticated, async (req: any, res) => {
+    try {
+      const { monetizationService } = await import('./monetizationService');
+      const performance = await monetizationService.getCTAPerformance();
+      
+      res.json(performance);
+    } catch (error) {
+      console.error('Error fetching CTA performance:', error);
+      res.status(500).json({ message: 'Failed to fetch CTA performance' });
+    }
+  });
+
+  app.post('/api/monetization/cta/track', async (req, res) => {
+    try {
+      const { url, type, revenue } = req.body;
+      
+      const { monetizationService } = await import('./monetizationService');
+      await monetizationService.trackCTAMetrics(url, type, revenue);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error tracking CTA:', error);
+      res.status(500).json({ message: 'Failed to track CTA' });
+    }
+  });
+
   // Social posts routes
   app.get('/api/uploads/:id/social-posts', isAuthenticated, async (req: any, res) => {
     try {
