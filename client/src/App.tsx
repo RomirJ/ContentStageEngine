@@ -8,6 +8,7 @@ import Dashboard from "@/pages/Dashboard";
 import Landing from "@/pages/Landing";
 import Scheduling from "@/pages/Scheduling";
 import Analytics from "@/pages/Analytics";
+import Monetization from "@/pages/Monetization";
 import NotFound from "@/pages/not-found";
 
 function Router() {

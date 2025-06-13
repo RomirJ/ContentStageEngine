@@ -9,7 +9,8 @@ import {
   BarChart3, 
   Share2,
   Settings,
-  LogOut
+  LogOut,
+  DollarSign
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -25,6 +26,7 @@ export default function Sidebar() {
     { icon: Video, label: "Content Library", href: "/library" },
     { icon: Calendar, label: "Scheduling", href: "/scheduling" },
     { icon: BarChart3, label: "Analytics", href: "/analytics" },
+    { icon: DollarSign, label: "Monetization", href: "/monetization" },
     { icon: Share2, label: "Social Accounts", href: "/accounts" },
   ];
 
