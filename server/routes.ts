@@ -477,6 +477,263 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Graphics generation routes
+  app.post('/api/graphics/quotes/:segmentId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { segmentId } = req.params;
+      const { branding } = req.body;
+      
+      const { graphicsService } = await import('./graphicsService');
+      const result = await graphicsService.processSegmentForGraphics(segmentId, branding);
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error generating quote graphics:', error);
+      res.status(500).json({ message: 'Failed to generate quote graphics' });
+    }
+  });
+
+  app.get('/api/graphics/templates', isAuthenticated, async (req: any, res) => {
+    try {
+      const { graphicsService } = await import('./graphicsService');
+      const templates = await graphicsService.getAvailableTemplates();
+      
+      res.json(templates);
+    } catch (error) {
+      console.error('Error fetching templates:', error);
+      res.status(500).json({ message: 'Failed to fetch templates' });
+    }
+  });
+
+  app.post('/api/graphics/templates', isAuthenticated, async (req: any, res) => {
+    try {
+      const templateData = req.body;
+      
+      const { graphicsService } = await import('./graphicsService');
+      const templateId = await graphicsService.createCustomTemplate(templateData);
+      
+      res.json({ templateId });
+    } catch (error) {
+      console.error('Error creating template:', error);
+      res.status(500).json({ message: 'Failed to create template' });
+    }
+  });
+
+  // User management routes
+  app.get('/api/workspaces', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const { userManagementService } = await import('./userManagementService');
+      const workspaces = await userManagementService.getWorkspacesByUser(userId);
+      
+      res.json(workspaces);
+    } catch (error) {
+      console.error('Error fetching workspaces:', error);
+      res.status(500).json({ message: 'Failed to fetch workspaces' });
+    }
+  });
+
+  app.post('/api/workspaces', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const workspaceData = req.body;
+      
+      const { userManagementService } = await import('./userManagementService');
+      const workspace = await userManagementService.createWorkspace(userId, workspaceData);
+      
+      res.json(workspace);
+    } catch (error) {
+      console.error('Error creating workspace:', error);
+      res.status(500).json({ message: 'Failed to create workspace' });
+    }
+  });
+
+  app.get('/api/workspaces/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      const { userManagementService } = await import('./userManagementService');
+      const workspace = await userManagementService.getWorkspace(id);
+      
+      if (!workspace) {
+        return res.status(404).json({ message: 'Workspace not found' });
+      }
+      
+      res.json(workspace);
+    } catch (error) {
+      console.error('Error fetching workspace:', error);
+      res.status(500).json({ message: 'Failed to fetch workspace' });
+    }
+  });
+
+  app.patch('/api/workspaces/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      const userId = req.user.claims.sub;
+      
+      const { userManagementService } = await import('./userManagementService');
+      const hasPermission = await userManagementService.checkPermission(userId, id, 'workspace.manage');
+      
+      if (!hasPermission) {
+        return res.status(403).json({ message: 'Insufficient permissions' });
+      }
+      
+      await userManagementService.updateWorkspace(id, updates);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error updating workspace:', error);
+      res.status(500).json({ message: 'Failed to update workspace' });
+    }
+  });
+
+  app.delete('/api/workspaces/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.claims.sub;
+      
+      const { userManagementService } = await import('./userManagementService');
+      await userManagementService.deleteWorkspace(id, userId);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting workspace:', error);
+      res.status(500).json({ message: 'Failed to delete workspace' });
+    }
+  });
+
+  app.get('/api/workspaces/:id/members', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.claims.sub;
+      
+      const { userManagementService } = await import('./userManagementService');
+      const hasPermission = await userManagementService.checkPermission(userId, id, 'members.view');
+      
+      if (!hasPermission) {
+        return res.status(403).json({ message: 'Insufficient permissions' });
+      }
+      
+      const members = await userManagementService.getWorkspaceMembers(id);
+      res.json(members);
+    } catch (error) {
+      console.error('Error fetching workspace members:', error);
+      res.status(500).json({ message: 'Failed to fetch workspace members' });
+    }
+  });
+
+  app.post('/api/workspaces/:id/members', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { userId: targetUserId, role } = req.body;
+      const userId = req.user.claims.sub;
+      
+      const { userManagementService } = await import('./userManagementService');
+      const hasPermission = await userManagementService.checkPermission(userId, id, 'members.invite');
+      
+      if (!hasPermission) {
+        return res.status(403).json({ message: 'Insufficient permissions' });
+      }
+      
+      const member = await userManagementService.addWorkspaceMember(id, targetUserId, role, userId);
+      res.json(member);
+    } catch (error) {
+      console.error('Error adding workspace member:', error);
+      res.status(500).json({ message: 'Failed to add workspace member' });
+    }
+  });
+
+  app.get('/api/user/profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const { userManagementService } = await import('./userManagementService');
+      const profile = await userManagementService.getUserProfile(userId);
+      
+      res.json(profile);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      res.status(500).json({ message: 'Failed to fetch user profile' });
+    }
+  });
+
+  app.patch('/api/user/profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const updates = req.body;
+      
+      const { userManagementService } = await import('./userManagementService');
+      await userManagementService.updateUserProfile(userId, updates);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      res.status(500).json({ message: 'Failed to update user profile' });
+    }
+  });
+
+  app.get('/api/user/onboarding', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const { userManagementService } = await import('./userManagementService');
+      const checklist = await userManagementService.getOnboardingChecklist(userId);
+      
+      res.json(checklist);
+    } catch (error) {
+      console.error('Error fetching onboarding checklist:', error);
+      res.status(500).json({ message: 'Failed to fetch onboarding checklist' });
+    }
+  });
+
+  app.post('/api/user/onboarding/complete', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const { userManagementService } = await import('./userManagementService');
+      await userManagementService.completeOnboarding(userId);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+      res.status(500).json({ message: 'Failed to complete onboarding' });
+    }
+  });
+
+  app.get('/api/workspaces/:id/usage', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { days = 30 } = req.query;
+      const userId = req.user.claims.sub;
+      
+      const { userManagementService } = await import('./userManagementService');
+      const hasPermission = await userManagementService.checkPermission(userId, id, 'analytics.view');
+      
+      if (!hasPermission) {
+        return res.status(403).json({ message: 'Insufficient permissions' });
+      }
+      
+      const usage = await userManagementService.getUsageReport(id, parseInt(days as string));
+      res.json(usage);
+    } catch (error) {
+      console.error('Error fetching usage report:', error);
+      res.status(500).json({ message: 'Failed to fetch usage report' });
+    }
+  });
+
+  app.get('/api/billing/plans', async (req, res) => {
+    try {
+      const { userManagementService } = await import('./userManagementService');
+      const plans = await userManagementService.getBillingPlans();
+      
+      res.json(plans);
+    } catch (error) {
+      console.error('Error fetching billing plans:', error);
+      res.status(500).json({ message: 'Failed to fetch billing plans' });
+    }
+  });
+
   // Social posts routes
   app.get('/api/uploads/:id/social-posts', isAuthenticated, async (req: any, res) => {
     try {
