@@ -34,6 +34,11 @@ export default function SocialContent({ uploadId }: SocialContentProps) {
 
   const { data: socialPosts, isLoading } = useQuery({
     queryKey: ['/api/uploads', uploadId, 'social-posts'],
+    queryFn: async () => {
+      const response = await fetch(`/api/uploads/${uploadId}/social-posts`);
+      if (!response.ok) throw new Error('Failed to fetch social posts');
+      return response.json();
+    },
   });
 
   const updatePostMutation = useMutation({
@@ -63,7 +68,7 @@ export default function SocialContent({ uploadId }: SocialContentProps) {
     );
   }
 
-  if (!socialPosts || socialPosts.length === 0) {
+  if (!socialPosts || !Array.isArray(socialPosts) || socialPosts.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -76,7 +81,7 @@ export default function SocialContent({ uploadId }: SocialContentProps) {
     );
   }
 
-  const platformPosts = socialPosts.reduce((acc: Record<string, SocialPost[]>, post: SocialPost) => {
+  const platformPosts = (socialPosts as SocialPost[]).reduce((acc: Record<string, SocialPost[]>, post: SocialPost) => {
     const platform = post.platform.replace('_graphic', '');
     if (!acc[platform]) acc[platform] = [];
     acc[platform].push(post);
@@ -128,7 +133,7 @@ export default function SocialContent({ uploadId }: SocialContentProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Share2 className="h-5 w-5" />
-          Generated Social Content ({socialPosts.length} posts)
+          Generated Social Content ({(socialPosts as SocialPost[]).length} posts)
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -144,7 +149,7 @@ export default function SocialContent({ uploadId }: SocialContentProps) {
           
           {Object.entries(platformPosts).map(([platform, posts]) => (
             <TabsContent key={platform} value={platform} className="space-y-4">
-              {posts.map((post) => (
+              {(posts as SocialPost[]).map((post) => (
                 <Card key={post.id} className="border-l-4 border-l-blue-500">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
