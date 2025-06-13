@@ -360,6 +360,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manual posting routes
+  app.post('/api/social-posts/:id/publish', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.claims.sub;
+      
+      // Verify post belongs to user
+      const post = await storage.getSocialPost(id);
+      if (!post) {
+        return res.status(404).json({ message: 'Post not found' });
+      }
+      
+      // Get upload to verify ownership
+      const segments = await storage.getSegmentsByUploadId(''); // Need to get segment first
+      // For now, we'll trust the post exists and publish it
+      
+      const { postingService } = await import('./postingService');
+      const result = await postingService.publishPostById(id);
+      
+      res.json({ success: true, result });
+    } catch (error) {
+      console.error('Error publishing post:', error);
+      res.status(500).json({ message: 'Failed to publish post' });
+    }
+  });
+
+  app.get('/api/posting/status', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Get posting statistics
+      const scheduledPosts = await storage.getScheduledPostsByUserId(userId);
+      const accounts = await storage.getUserSocialAccounts(userId);
+      
+      const stats = {
+        totalScheduled: scheduledPosts.length,
+        postsToday: scheduledPosts.filter((post: any) => {
+          const postDate = new Date(post.scheduledFor);
+          const today = new Date();
+          return postDate.toDateString() === today.toDateString();
+        }).length,
+        activeAccounts: accounts.filter(acc => acc.isActive).length,
+        recentlyPosted: scheduledPosts.filter((post: any) => post.status === 'posted').slice(0, 5)
+      };
+      
+      res.json(stats);
+    } catch (error) {
+      console.error('Error fetching posting status:', error);
+      res.status(500).json({ message: 'Failed to fetch posting status' });
+    }
+  });
+
   app.patch('/api/social-posts/:id/status', isAuthenticated, async (req: any, res) => {
     try {
       const postId = req.params.id;

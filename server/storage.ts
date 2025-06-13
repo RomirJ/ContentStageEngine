@@ -53,17 +53,21 @@ export interface IStorage {
   // Social account operations
   getUserSocialAccounts(userId: string): Promise<SocialAccount[]>;
   getSocialAccount(id: string): Promise<SocialAccount | undefined>;
+  getSocialAccountsByPlatform(platform: string): Promise<SocialAccount[]>;
   createSocialAccount(account: any): Promise<SocialAccount>;
   updateSocialAccountStatus(id: string, isActive: boolean): Promise<void>;
   updateSocialAccountToken(id: string, tokenData: any): Promise<void>;
   deleteSocialAccount(id: string): Promise<void>;
+  getAllUsers(): Promise<User[]>;
   
   // Social post operations
   createSocialPost(socialPost: InsertSocialPost): Promise<SocialPost>;
+  getSocialPost(id: string): Promise<SocialPost | undefined>;
   getSocialPostsBySegmentId(segmentId: string): Promise<SocialPost[]>;
   getSocialPostsByUploadId(uploadId: string): Promise<SocialPost[]>;
   getSocialPostsByUserId(userId: string, status?: string): Promise<SocialPost[]>;
   updateSocialPostStatus(id: string, status: string): Promise<void>;
+  updateSocialPost(id: string, data: any): Promise<void>;
   updateSocialPostSchedule(id: string, scheduledFor: string): Promise<void>;
 
   // Scheduled posts operations
@@ -371,6 +375,32 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(socialAccounts)
       .where(eq(socialAccounts.id, id));
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  async getSocialAccountsByPlatform(platform: string): Promise<SocialAccount[]> {
+    return await db
+      .select()
+      .from(socialAccounts)
+      .where(eq(socialAccounts.platform, platform));
+  }
+
+  async getSocialPost(id: string): Promise<SocialPost | undefined> {
+    const [post] = await db
+      .select()
+      .from(socialPosts)
+      .where(eq(socialPosts.id, id));
+    return post;
+  }
+
+  async updateSocialPost(id: string, data: any): Promise<void> {
+    await db
+      .update(socialPosts)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(socialPosts.id, id));
   }
 }
 
