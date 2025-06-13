@@ -23,7 +23,7 @@ import {
   type ScheduledPost,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql, inArray, isNotNull } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -297,48 +297,52 @@ export class DatabaseStorage implements IStorage {
 
   async getSocialPostsByUserId(userId: string, status?: string): Promise<SocialPost[]> {
     const uploads = await this.getUserUploads(userId);
-    const uploadIds = uploads.map(u => u.id);
     
-    if (uploadIds.length === 0) return [];
+    if (uploads.length === 0) return [];
     
-    let query = db
-      .select()
-      .from(socialPosts)
-      .innerJoin(segments, eq(socialPosts.segmentId, segments.id))
-      .where(inArray(segments.uploadId, uploadIds));
-    
-    if (status) {
-      query = query.where(eq(socialPosts.status, status));
+    // Get all social posts for this user's uploads
+    let allPosts: SocialPost[] = [];
+    for (const upload of uploads) {
+      const posts = await this.getSocialPostsByUploadId(upload.id);
+      allPosts.push(...posts);
     }
     
-    const results = await query;
-    return results.map(r => r.social_posts);
+    // Filter by status if provided
+    if (status) {
+      allPosts = allPosts.filter(post => post.status === status);
+    }
+    
+    return allPosts;
   }
 
   async getScheduledPostsByUserId(userId: string): Promise<any[]> {
     const uploads = await this.getUserUploads(userId);
-    const uploadIds = uploads.map(u => u.id);
     
-    if (uploadIds.length === 0) return [];
+    if (uploads.length === 0) return [];
     
-    const results = await db
-      .select({
-        id: socialPosts.id,
-        content: socialPosts.content,
-        platform: socialPosts.platform,
-        scheduledFor: socialPosts.scheduledFor,
-        status: socialPosts.status,
-        segmentTitle: segments.title,
-      })
-      .from(socialPosts)
-      .innerJoin(segments, eq(socialPosts.segmentId, segments.id))
-      .where(and(
-        inArray(segments.uploadId, uploadIds),
-        isNotNull(socialPosts.scheduledFor)
-      ))
-      .orderBy(socialPosts.scheduledFor);
+    let allScheduledPosts: any[] = [];
     
-    return results;
+    for (const upload of uploads) {
+      const segments = await this.getSegmentsByUploadId(upload.id);
+      for (const segment of segments) {
+        const posts = await this.getSocialPostsBySegmentId(segment.id);
+        const scheduledPosts = posts
+          .filter(post => post.scheduledFor)
+          .map(post => ({
+            id: post.id,
+            content: post.content,
+            platform: post.platform,
+            scheduledFor: post.scheduledFor,
+            status: post.status,
+            segmentTitle: segment.title,
+          }));
+        allScheduledPosts.push(...scheduledPosts);
+      }
+    }
+    
+    return allScheduledPosts.sort((a, b) => 
+      new Date(a.scheduledFor).getTime() - new Date(b.scheduledFor).getTime()
+    );
   }
 
   async createSocialAccount(accountData: any): Promise<SocialAccount> {
