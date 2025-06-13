@@ -198,6 +198,170 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/social-posts/:id', isAuthenticated, async (req: any, res) => {
     try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      await storage.updateSocialPostStatus(id, status);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error updating social post:', error);
+      res.status(500).json({ message: 'Failed to update social post' });
+    }
+  });
+
+  // Scheduled posts routes
+  app.get('/api/scheduled-posts', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const posts = await storage.getScheduledPostsByUserId(userId);
+      res.json(posts);
+    } catch (error) {
+      console.error("Error fetching scheduled posts:", error);
+      res.status(500).json({ message: "Failed to fetch scheduled posts" });
+    }
+  });
+
+  app.patch('/api/social-posts/:id/schedule', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { scheduledFor } = req.body;
+      
+      await storage.updateSocialPostSchedule(id, scheduledFor);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error scheduling post:", error);
+      res.status(500).json({ message: "Failed to schedule post" });
+    }
+  });
+
+  // Social accounts routes
+  app.get('/api/social-accounts', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const accounts = await storage.getUserSocialAccounts(userId);
+      res.json(accounts);
+    } catch (error) {
+      console.error("Error fetching social accounts:", error);
+      res.status(500).json({ message: "Failed to fetch social accounts" });
+    }
+  });
+
+  app.patch('/api/social-accounts/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { isActive } = req.body;
+      
+      await storage.updateSocialAccountStatus(id, isActive);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating social account:", error);
+      res.status(500).json({ message: "Failed to update social account" });
+    }
+  });
+
+  app.delete('/api/social-accounts/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteSocialAccount(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting social account:", error);
+      res.status(500).json({ message: "Failed to delete social account" });
+    }
+  });
+
+  // OAuth routes for social platforms
+  app.get('/api/auth/:platform/connect', isAuthenticated, async (req: any, res) => {
+    const { platform } = req.params;
+    const userId = req.user.claims.sub;
+    
+    // Store user ID in session for OAuth callback
+    req.session.oauthUserId = userId;
+    req.session.oauthPlatform = platform;
+    
+    const redirectUrls: Record<string, string> = {
+      twitter: `https://api.twitter.com/oauth/authorize?oauth_token=REQUEST_TOKEN`,
+      linkedin: `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${process.env.LINKEDIN_CLIENT_ID}&redirect_uri=${encodeURIComponent(process.env.LINKEDIN_REDIRECT_URI || '')}&scope=r_liteprofile%20r_emailaddress%20w_member_social`,
+      instagram: `https://api.instagram.com/oauth/authorize?client_id=${process.env.INSTAGRAM_CLIENT_ID}&redirect_uri=${encodeURIComponent(process.env.INSTAGRAM_REDIRECT_URI || '')}&scope=user_profile,user_media&response_type=code`,
+      tiktok: `https://open-api.tiktok.com/platform/oauth/connect/?client_key=${process.env.TIKTOK_CLIENT_KEY}&response_type=code&scope=user.info.basic,video.list&redirect_uri=${encodeURIComponent(process.env.TIKTOK_REDIRECT_URI || '')}`,
+      youtube: `https://accounts.google.com/oauth2/auth?client_id=${process.env.GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(process.env.GOOGLE_REDIRECT_URI || '')}&scope=https://www.googleapis.com/auth/youtube.upload&response_type=code&access_type=offline`
+    };
+    
+    const redirectUrl = redirectUrls[platform];
+    if (!redirectUrl) {
+      return res.status(400).json({ message: "Unsupported platform" });
+    }
+    
+    res.redirect(redirectUrl);
+  });
+
+  app.get('/api/auth/:platform/callback', async (req: any, res) => {
+    try {
+      const { platform } = req.params;
+      const { code } = req.query;
+      const userId = req.session.oauthUserId;
+      
+      if (!userId || !code) {
+        return res.status(400).json({ message: "Invalid OAuth callback" });
+      }
+      
+      // Here you would exchange the code for access tokens
+      // For now, we'll create a placeholder account
+      await storage.createSocialAccount({
+        userId,
+        platform,
+        accountId: `${platform}_user_${Date.now()}`,
+        accessToken: 'placeholder_token',
+        refreshToken: 'placeholder_refresh',
+        expiresAt: new Date(Date.now() + 3600000), // 1 hour from now
+        isActive: true
+      });
+      
+      // Clean up session
+      delete req.session.oauthUserId;
+      delete req.session.oauthPlatform;
+      
+      res.redirect('/?connected=' + platform);
+    } catch (error) {
+      console.error("OAuth callback error:", error);
+      res.status(500).json({ message: "OAuth callback failed" });
+    }
+  });
+
+  app.post('/api/social-accounts/:id/refresh', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Here you would refresh the actual token
+      // For now, we'll update the expiry time
+      await storage.updateSocialAccountToken(id, {
+        accessToken: 'refreshed_token',
+        expiresAt: new Date(Date.now() + 3600000)
+      });
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error refreshing token:", error);
+      res.status(500).json({ message: "Failed to refresh token" });
+    }
+  });
+
+  // Get social posts with filtering
+  app.get('/api/social-posts', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { status } = req.query;
+      
+      const posts = await storage.getSocialPostsByUserId(userId, status as string);
+      res.json(posts);
+    } catch (error) {
+      console.error("Error fetching social posts:", error);
+      res.status(500).json({ message: "Failed to fetch social posts" });
+    }
+  });
+
+  app.patch('/api/social-posts/:id/status', isAuthenticated, async (req: any, res) => {
+    try {
       const postId = req.params.id;
       const { status, scheduledFor } = req.body;
       

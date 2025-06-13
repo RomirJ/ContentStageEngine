@@ -53,12 +53,21 @@ export interface IStorage {
   // Social account operations
   getUserSocialAccounts(userId: string): Promise<SocialAccount[]>;
   getSocialAccount(id: string): Promise<SocialAccount | undefined>;
+  createSocialAccount(account: any): Promise<SocialAccount>;
+  updateSocialAccountStatus(id: string, isActive: boolean): Promise<void>;
+  updateSocialAccountToken(id: string, tokenData: any): Promise<void>;
+  deleteSocialAccount(id: string): Promise<void>;
   
   // Social post operations
   createSocialPost(socialPost: InsertSocialPost): Promise<SocialPost>;
   getSocialPostsBySegmentId(segmentId: string): Promise<SocialPost[]>;
   getSocialPostsByUploadId(uploadId: string): Promise<SocialPost[]>;
+  getSocialPostsByUserId(userId: string, status?: string): Promise<SocialPost[]>;
   updateSocialPostStatus(id: string, status: string): Promise<void>;
+  updateSocialPostSchedule(id: string, scheduledFor: string): Promise<void>;
+
+  // Scheduled posts operations
+  getScheduledPostsByUserId(userId: string): Promise<any[]>;
 
   // Analytics
   getUserStats(userId: string): Promise<{
@@ -273,6 +282,91 @@ export class DatabaseStorage implements IStorage {
       .update(socialPosts)
       .set({ status, updatedAt: new Date() })
       .where(eq(socialPosts.id, id));
+  }
+
+  async updateSocialPostSchedule(id: string, scheduledFor: string): Promise<void> {
+    await db
+      .update(socialPosts)
+      .set({ 
+        scheduledFor: new Date(scheduledFor),
+        status: 'scheduled',
+        updatedAt: new Date() 
+      })
+      .where(eq(socialPosts.id, id));
+  }
+
+  async getSocialPostsByUserId(userId: string, status?: string): Promise<SocialPost[]> {
+    const uploads = await this.getUserUploads(userId);
+    const uploadIds = uploads.map(u => u.id);
+    
+    if (uploadIds.length === 0) return [];
+    
+    let query = db
+      .select()
+      .from(socialPosts)
+      .innerJoin(segments, eq(socialPosts.segmentId, segments.id))
+      .where(inArray(segments.uploadId, uploadIds));
+    
+    if (status) {
+      query = query.where(eq(socialPosts.status, status));
+    }
+    
+    const results = await query;
+    return results.map(r => r.social_posts);
+  }
+
+  async getScheduledPostsByUserId(userId: string): Promise<any[]> {
+    const uploads = await this.getUserUploads(userId);
+    const uploadIds = uploads.map(u => u.id);
+    
+    if (uploadIds.length === 0) return [];
+    
+    const results = await db
+      .select({
+        id: socialPosts.id,
+        content: socialPosts.content,
+        platform: socialPosts.platform,
+        scheduledFor: socialPosts.scheduledFor,
+        status: socialPosts.status,
+        segmentTitle: segments.title,
+      })
+      .from(socialPosts)
+      .innerJoin(segments, eq(socialPosts.segmentId, segments.id))
+      .where(and(
+        inArray(segments.uploadId, uploadIds),
+        isNotNull(socialPosts.scheduledFor)
+      ))
+      .orderBy(socialPosts.scheduledFor);
+    
+    return results;
+  }
+
+  async createSocialAccount(accountData: any): Promise<SocialAccount> {
+    const [account] = await db
+      .insert(socialAccounts)
+      .values(accountData)
+      .returning();
+    return account;
+  }
+
+  async updateSocialAccountStatus(id: string, isActive: boolean): Promise<void> {
+    await db
+      .update(socialAccounts)
+      .set({ isActive })
+      .where(eq(socialAccounts.id, id));
+  }
+
+  async updateSocialAccountToken(id: string, tokenData: any): Promise<void> {
+    await db
+      .update(socialAccounts)
+      .set(tokenData)
+      .where(eq(socialAccounts.id, id));
+  }
+
+  async deleteSocialAccount(id: string): Promise<void> {
+    await db
+      .delete(socialAccounts)
+      .where(eq(socialAccounts.id, id));
   }
 }
 
