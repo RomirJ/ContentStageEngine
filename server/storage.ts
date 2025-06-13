@@ -20,7 +20,7 @@ import {
   type ScheduledPost,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -191,13 +191,13 @@ export class DatabaseStorage implements IStorage {
   }> {
     // Get total uploads
     const totalUploadsResult = await db
-      .select({ count: sql<number>`count(*)`.mapWith(Number) })
+      .select({ count: sql<number>`count(*)` })
       .from(uploads)
       .where(eq(uploads.userId, userId));
 
     // Get content generated (clips)
     const contentGeneratedResult = await db
-      .select({ count: sql<number>`count(*)`.mapWith(Number) })
+      .select({ count: sql<number>`count(*)` })
       .from(clips)
       .innerJoin(segments, eq(clips.segmentId, segments.id))
       .innerJoin(uploads, eq(segments.uploadId, uploads.id))
@@ -205,7 +205,7 @@ export class DatabaseStorage implements IStorage {
 
     // Get posts scheduled
     const postsScheduledResult = await db
-      .select({ count: sql<number>`count(*)`.mapWith(Number) })
+      .select({ count: sql<number>`count(*)` })
       .from(scheduledPosts)
       .innerJoin(clips, eq(scheduledPosts.clipId, clips.id))
       .innerJoin(segments, eq(clips.segmentId, segments.id))
