@@ -123,7 +123,49 @@ export async function cleanupOldFiles(maxAgeHours: number = 24 * 7): Promise<voi
   }
 }
 
+async function handleUpload(file: any, userId: string): Promise<FileUploadResult> {
+  try {
+    if (!validateFileType(file.mimetype)) {
+      return {
+        success: false,
+        error: 'Invalid file type. Only MP4, MOV, MP3, and WAV files are allowed.'
+      };
+    }
+
+    // Create upload record
+    const uploadData = {
+      userId,
+      filename: file.filename,
+      originalName: file.originalname,
+      filePath: file.path,
+      fileSize: file.size,
+      mimeType: file.mimetype,
+      status: 'uploaded',
+    };
+
+    const upload = await storage.createUpload(uploadData);
+
+    // Start processing the file asynchronously
+    processFile(upload.id).catch(error => {
+      console.error('File processing error:', error);
+      storage.updateUploadStatus(upload.id, 'failed');
+    });
+
+    return {
+      success: true,
+      uploadId: upload.id
+    };
+  } catch (error) {
+    console.error('Upload handling error:', error);
+    return {
+      success: false,
+      error: 'Upload failed'
+    };
+  }
+}
+
 export const fileUpload = {
+  handleUpload,
   validateFileType,
   getFileExtension,
   formatFileSize,
