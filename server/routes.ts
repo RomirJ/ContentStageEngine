@@ -1787,6 +1787,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/upload/chunked/instagram/init', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { filePath, mediaType } = req.body;
+      
+      if (!filePath || !mediaType) {
+        return res.status(400).json({ error: 'filePath and mediaType are required' });
+      }
+      
+      const { chunkedUploadHelpers } = await import('./chunkedUploadHelpers');
+      const session = await chunkedUploadHelpers.initializeInstagramUpload(userId, filePath, mediaType);
+      
+      res.json(session);
+    } catch (error) {
+      console.error('Error initializing Instagram upload:', error);
+      res.status(500).json({ error: 'Failed to initialize Instagram upload' });
+    }
+  });
+
+  app.post('/api/upload/chunked/instagram/upload', isAuthenticated, async (req: any, res) => {
+    try {
+      const { sessionId, filePath } = req.body;
+      
+      if (!sessionId || !filePath) {
+        return res.status(400).json({ error: 'sessionId and filePath are required' });
+      }
+      
+      const { chunkedUploadHelpers } = await import('./chunkedUploadHelpers');
+      const result = await chunkedUploadHelpers.uploadInstagramMedia(sessionId, filePath);
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error uploading Instagram media:', error);
+      res.status(500).json({ error: 'Failed to upload Instagram media' });
+    }
+  });
+
+  app.post('/api/upload/chunked/instagram/publish', isAuthenticated, async (req: any, res) => {
+    try {
+      const { sessionId, caption, locationId } = req.body;
+      
+      if (!sessionId) {
+        return res.status(400).json({ error: 'sessionId is required' });
+      }
+      
+      const { chunkedUploadHelpers } = await import('./chunkedUploadHelpers');
+      const result = await chunkedUploadHelpers.publishInstagramMedia(sessionId, caption, locationId);
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error publishing Instagram media:', error);
+      res.status(500).json({ error: 'Failed to publish Instagram media' });
+    }
+  });
+
+  app.post('/api/upload/chunked/instagram/carousel', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { mediaItems } = req.body;
+      
+      if (!mediaItems || !Array.isArray(mediaItems)) {
+        return res.status(400).json({ error: 'mediaItems array is required' });
+      }
+      
+      const { chunkedUploadHelpers } = await import('./chunkedUploadHelpers');
+      const result = await chunkedUploadHelpers.createInstagramCarousel(userId, mediaItems);
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error creating Instagram carousel:', error);
+      res.status(500).json({ error: 'Failed to create Instagram carousel' });
+    }
+  });
+
   app.get('/api/upload/chunked/session/:sessionId', isAuthenticated, async (req: any, res) => {
     try {
       const { sessionId } = req.params;

@@ -15,6 +15,7 @@
   - YouTube Resumable Upload (INIT → chunks → completion)
   - X/Twitter Upload (INIT/APPEND/FINALIZE flow)
   - TikTok Multipart Upload
+  - Instagram Graph API Upload (photos, videos, reels, carousels)
 - **Session management** with progress tracking
 - **Upload status monitoring** with real-time updates
 

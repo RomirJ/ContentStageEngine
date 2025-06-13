@@ -415,6 +415,250 @@ export class ChunkedUploadHelpers {
     }
   }
 
+  async initializeInstagramUpload(userId: string, filePath: string, mediaType: 'photo' | 'video' | 'reel'): Promise<UploadSession> {
+    try {
+      const fileStats = fs.statSync(filePath);
+      const fileName = path.basename(filePath);
+      const sessionId = `${userId}_instagram_${Date.now()}`;
+
+      // Instagram Graph API - Create media container
+      const accessToken = await oauthService.getValidToken(userId, 'instagram');
+      if (!accessToken) {
+        throw new Error('Instagram access token not available');
+      }
+
+      const publicUrl = `${process.env.BASE_URL}/uploads/${fileName}`;
+      
+      const createContainerParams = new URLSearchParams({
+        media_type: mediaType === 'reel' ? 'REELS' : mediaType.toUpperCase(),
+        access_token: accessToken
+      });
+
+      if (mediaType === 'video' || mediaType === 'reel') {
+        createContainerParams.append('video_url', publicUrl);
+      } else {
+        createContainerParams.append('image_url', publicUrl);
+      }
+
+      const response = await fetch(`https://graph.facebook.com/v18.0/${process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID}/media`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: createContainerParams
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error?.message || 'Failed to initialize Instagram upload');
+      }
+
+      const session: UploadSession = {
+        id: sessionId,
+        platform: 'instagram',
+        fileName,
+        fileSize: fileStats.size,
+        uploadId: data.id, // Instagram container ID
+        chunks: this.calculateChunks(fileStats.size),
+        status: 'initialized',
+        createdAt: new Date()
+      };
+
+      this.uploadSessions.set(sessionId, session);
+      console.log(`[ChunkedUpload] Instagram upload session initialized: ${sessionId}, container_id: ${data.id}`);
+
+      return session;
+    } catch (error) {
+      console.error('[ChunkedUpload] Instagram initialization error:', error);
+      throw error;
+    }
+  }
+
+  async uploadInstagramMedia(sessionId: string, filePath: string): Promise<ChunkUploadResult> {
+    try {
+      const session = this.uploadSessions.get(sessionId);
+      if (!session || session.platform !== 'instagram') {
+        throw new Error('Invalid Instagram upload session');
+      }
+
+      session.status = 'uploading';
+      
+      // For Instagram, the file needs to be publicly accessible
+      // The media container creation already provided the URL
+      // Instagram will fetch the media from the provided URL
+      
+      // Simulate upload progress by marking chunks as uploaded
+      let uploadedBytes = 0;
+      for (const chunk of session.chunks) {
+        chunk.uploaded = true;
+        uploadedBytes += chunk.size;
+        
+        // Small delay to simulate upload progress
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      console.log(`[ChunkedUpload] Instagram media uploaded successfully: ${session.fileName}`);
+      
+      return {
+        success: true,
+        bytesUploaded: uploadedBytes
+      };
+    } catch (error) {
+      console.error('[ChunkedUpload] Instagram upload error:', error);
+      const session = this.uploadSessions.get(sessionId);
+      if (session) session.status = 'failed';
+      
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Upload failed'
+      };
+    }
+  }
+
+  async publishInstagramMedia(sessionId: string, caption?: string, locationId?: string): Promise<{ success: boolean; mediaId?: string; error?: string }> {
+    try {
+      const session = this.uploadSessions.get(sessionId);
+      if (!session || !session.uploadId || session.platform !== 'instagram') {
+        throw new Error('Invalid Instagram session or container ID not found');
+      }
+
+      const userId = session.id.split('_')[0];
+      const accessToken = await oauthService.getValidToken(userId, 'instagram');
+      if (!accessToken) {
+        throw new Error('Instagram access token not available');
+      }
+
+      // Publish the media container
+      const publishParams = new URLSearchParams({
+        creation_id: session.uploadId,
+        access_token: accessToken
+      });
+
+      if (caption) publishParams.append('caption', caption);
+      if (locationId) publishParams.append('location_id', locationId);
+
+      const response = await fetch(`https://graph.facebook.com/v18.0/${process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID}/media_publish`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: publishParams
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        session.status = 'failed';
+        throw new Error(data.error?.message || 'Failed to publish Instagram media');
+      }
+
+      session.status = 'completed';
+      session.completedAt = new Date();
+      
+      console.log(`[ChunkedUpload] Instagram media published successfully: ${data.id}`);
+      
+      return {
+        success: true,
+        mediaId: data.id
+      };
+    } catch (error) {
+      console.error('[ChunkedUpload] Instagram publish error:', error);
+      const session = this.uploadSessions.get(sessionId);
+      if (session) session.status = 'failed';
+      
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Publish failed'
+      };
+    }
+  }
+
+  async createInstagramCarousel(userId: string, mediaItems: Array<{
+    filePath: string;
+    mediaType: 'photo' | 'video';
+    caption?: string;
+  }>): Promise<{ success: boolean; carouselId?: string; error?: string }> {
+    try {
+      const accessToken = await oauthService.getValidToken(userId, 'instagram');
+      if (!accessToken) {
+        throw new Error('Instagram access token not available');
+      }
+
+      const containerIds: string[] = [];
+
+      // Create containers for each media item
+      for (const item of mediaItems) {
+        const fileName = path.basename(item.filePath);
+        const publicUrl = `${process.env.BASE_URL}/uploads/${fileName}`;
+
+        const createParams = new URLSearchParams({
+          media_type: item.mediaType.toUpperCase(),
+          is_carousel_item: 'true',
+          access_token: accessToken
+        });
+
+        if (item.mediaType === 'video') {
+          createParams.append('video_url', publicUrl);
+        } else {
+          createParams.append('image_url', publicUrl);
+        }
+
+        const response = await fetch(`https://graph.facebook.com/v18.0/${process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID}/media`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: createParams
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error?.message || 'Failed to create carousel item');
+        }
+
+        containerIds.push(data.id);
+      }
+
+      // Create carousel container
+      const carouselParams = new URLSearchParams({
+        media_type: 'CAROUSEL',
+        children: containerIds.join(','),
+        access_token: accessToken
+      });
+
+      if (mediaItems[0].caption) {
+        carouselParams.append('caption', mediaItems[0].caption);
+      }
+
+      const carouselResponse = await fetch(`https://graph.facebook.com/v18.0/${process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID}/media`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: carouselParams
+      });
+
+      const carouselData = await carouselResponse.json();
+      if (!carouselResponse.ok) {
+        throw new Error(carouselData.error?.message || 'Failed to create carousel');
+      }
+
+      console.log(`[ChunkedUpload] Instagram carousel created successfully: ${carouselData.id}`);
+
+      return {
+        success: true,
+        carouselId: carouselData.id
+      };
+    } catch (error) {
+      console.error('[ChunkedUpload] Instagram carousel error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Carousel creation failed'
+      };
+    }
+  }
+
   private calculateChunks(fileSize: number): Array<{ index: number; size: number; uploaded: boolean }> {
     const totalChunks = Math.ceil(fileSize / this.CHUNK_SIZE);
     const chunks = [];
