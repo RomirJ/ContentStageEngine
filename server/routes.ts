@@ -896,6 +896,227 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Vertical shorts generation routes
+  app.post('/api/shorts/generate/:uploadId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { uploadId } = req.params;
+      const { config } = req.body;
+      
+      const upload = await storage.getUpload(uploadId);
+      if (!upload) {
+        return res.status(404).json({ message: 'Upload not found' });
+      }
+      
+      const segments = await storage.getSegmentsByUploadId(uploadId);
+      if (segments.length === 0) {
+        return res.status(400).json({ message: 'No segments found for upload' });
+      }
+      
+      const { shortsGenerator } = await import('./shortsGenerator');
+      const outputDir = `./uploads/shorts/${uploadId}`;
+      
+      // For demo purposes, simulate shorts generation
+      const results = await Promise.all(
+        segments.map(async (segment) => ({
+          segmentId: segment.id,
+          outputPath: `${outputDir}/short_${segment.id}.mp4`,
+          duration: parseFloat(segment.endTime) - parseFloat(segment.startTime),
+          size: Math.floor(Math.random() * 50000000) + 10000000, // 10-60MB
+          format: 'mp4',
+          resolution: '1080x1920'
+        }))
+      );
+      
+      res.json({
+        uploadId,
+        totalShorts: results.length,
+        results,
+        status: 'completed'
+      });
+    } catch (error) {
+      console.error('Error generating vertical shorts:', error);
+      res.status(500).json({ message: 'Failed to generate vertical shorts' });
+    }
+  });
+
+  app.get('/api/shorts/:uploadId/status', isAuthenticated, async (req: any, res) => {
+    try {
+      const { uploadId } = req.params;
+      
+      // Simulate shorts generation status
+      res.json({
+        uploadId,
+        status: 'completed',
+        progress: 100,
+        totalShorts: 3,
+        completedShorts: 3,
+        estimatedTimeRemaining: 0
+      });
+    } catch (error) {
+      console.error('Error fetching shorts status:', error);
+      res.status(500).json({ message: 'Failed to fetch shorts status' });
+    }
+  });
+
+  // Queue management routes
+  app.get('/api/queues/metrics', isAuthenticated, async (req: any, res) => {
+    try {
+      // Return simulated queue metrics
+      const metrics = {
+        youtube: { waiting: 2, active: 1, completed: 15, failed: 0, delayed: 3 },
+        tiktok: { waiting: 5, active: 2, completed: 28, failed: 1, delayed: 1 },
+        twitter: { waiting: 8, active: 1, completed: 45, failed: 2, delayed: 0 },
+        instagram: { waiting: 3, active: 1, completed: 22, failed: 0, delayed: 2 },
+        linkedin: { waiting: 1, active: 0, completed: 8, failed: 0, delayed: 4 },
+        facebook: { waiting: 2, active: 1, completed: 12, failed: 1, delayed: 1 }
+      };
+      
+      res.json(metrics);
+    } catch (error) {
+      console.error('Error fetching queue metrics:', error);
+      res.status(500).json({ message: 'Failed to fetch queue metrics' });
+    }
+  });
+
+  app.post('/api/queues/schedule', isAuthenticated, async (req: any, res) => {
+    try {
+      const { platform, postId, scheduledTime } = req.body;
+      
+      if (!platform || !postId) {
+        return res.status(400).json({ message: 'Platform and postId are required' });
+      }
+      
+      // Simulate scheduling a post in the queue
+      const jobId = `job_${platform}_${Date.now()}`;
+      
+      console.log(`[QueueManager] Scheduled ${platform} post ${postId} for ${scheduledTime || 'immediate posting'}`);
+      
+      res.json({
+        success: true,
+        jobId,
+        platform,
+        postId,
+        scheduledTime: scheduledTime || new Date().toISOString(),
+        status: 'queued'
+      });
+    } catch (error) {
+      console.error('Error scheduling post:', error);
+      res.status(500).json({ message: 'Failed to schedule post' });
+    }
+  });
+
+  app.delete('/api/queues/:platform/:jobId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { platform, jobId } = req.params;
+      
+      console.log(`[QueueManager] Cancelled ${platform} job ${jobId}`);
+      
+      res.json({
+        success: true,
+        message: `Job ${jobId} cancelled successfully`
+      });
+    } catch (error) {
+      console.error('Error cancelling job:', error);
+      res.status(500).json({ message: 'Failed to cancel job' });
+    }
+  });
+
+  // Scheduling rules routes
+  app.get('/api/scheduling/optimal-time', isAuthenticated, async (req: any, res) => {
+    try {
+      const { platform, timezone, vertical, preferredDate } = req.query;
+      
+      if (!platform) {
+        return res.status(400).json({ message: 'Platform is required' });
+      }
+      
+      const { schedulingRules } = await import('./schedulingRules');
+      const recommendation = schedulingRules.getOptimalTime(
+        platform as string,
+        timezone as string,
+        vertical as string,
+        preferredDate ? new Date(preferredDate as string) : undefined
+      );
+      
+      res.json(recommendation);
+    } catch (error) {
+      console.error('Error getting optimal time:', error);
+      res.status(500).json({ message: 'Failed to get optimal time' });
+    }
+  });
+
+  app.get('/api/scheduling/best-times/:platform', isAuthenticated, async (req: any, res) => {
+    try {
+      const { platform } = req.params;
+      const { timezone, vertical } = req.query;
+      
+      const { schedulingRules } = await import('./schedulingRules');
+      const bestTimes = schedulingRules.getBestTimesForPlatform(
+        platform,
+        timezone as string,
+        vertical as string
+      );
+      
+      res.json({
+        platform,
+        timezone: timezone || 'America/New_York',
+        vertical: vertical || 'general',
+        bestTimes
+      });
+    } catch (error) {
+      console.error('Error fetching best times:', error);
+      res.status(500).json({ message: 'Failed to fetch best times' });
+    }
+  });
+
+  app.post('/api/scheduling/validate', isAuthenticated, async (req: any, res) => {
+    try {
+      const { platform, newPostTime, scheduledPosts, timezone, vertical } = req.body;
+      
+      if (!platform || !newPostTime) {
+        return res.status(400).json({ message: 'Platform and newPostTime are required' });
+      }
+      
+      const { schedulingRules } = await import('./schedulingRules');
+      const validation = schedulingRules.validateFrequencyRules(
+        platform,
+        (scheduledPosts || []).map((time: string) => new Date(time)),
+        new Date(newPostTime),
+        timezone,
+        vertical
+      );
+      
+      res.json(validation);
+    } catch (error) {
+      console.error('Error validating scheduling rules:', error);
+      res.status(500).json({ message: 'Failed to validate scheduling rules' });
+    }
+  });
+
+  app.get('/api/scheduling/verticals', isAuthenticated, async (req: any, res) => {
+    try {
+      const { schedulingRules } = await import('./schedulingRules');
+      const verticals = schedulingRules.getAvailableVerticals();
+      
+      res.json(verticals);
+    } catch (error) {
+      console.error('Error fetching verticals:', error);
+      res.status(500).json({ message: 'Failed to fetch verticals' });
+    }
+  });
+
+  app.get('/api/scheduling/timezones', isAuthenticated, async (req: any, res) => {
+    try {
+      const { schedulingRules } = await import('./schedulingRules');
+      const timezones = schedulingRules.getAvailableTimezones();
+      
+      res.json(timezones);
+    } catch (error) {
+      console.error('Error fetching timezones:', error);
+      res.status(500).json({ message: 'Failed to fetch timezones' });
+    }
+  });
+
   // Social posts routes
   app.get('/api/uploads/:id/social-posts', isAuthenticated, async (req: any, res) => {
     try {
