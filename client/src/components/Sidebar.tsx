@@ -23,7 +23,7 @@ export default function Sidebar() {
     { icon: Home, label: "Dashboard", href: "/", active: true },
     { icon: Upload, label: "Upload Content", href: "/upload" },
     { icon: Video, label: "Content Library", href: "/library" },
-    { icon: Calendar, label: "Scheduling", href: "/schedule" },
+    { icon: Calendar, label: "Scheduling", href: "/scheduling" },
     { icon: BarChart3, label: "Analytics", href: "/analytics" },
     { icon: Share2, label: "Social Accounts", href: "/accounts" },
   ];

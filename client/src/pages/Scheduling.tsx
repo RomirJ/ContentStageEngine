@@ -112,7 +112,7 @@ export default function Scheduling() {
         <div className="flex items-center gap-4">
           <div className="text-right">
             <div className="text-sm text-muted-foreground">Welcome back</div>
-            <div className="font-medium">{user?.firstName || user?.email}</div>
+            <div className="font-medium">{(user as any)?.firstName || (user as any)?.email}</div>
           </div>
         </div>
       </div>
