@@ -26,6 +26,7 @@ function Router() {
           <Route path="/scheduling" component={Scheduling} />
           <Route path="/analytics" component={Analytics} />
           <Route path="/monetization" component={Monetization} />
+          <Route path="/settings" component={Settings} />
         </>
       )}
       <Route component={NotFound} />

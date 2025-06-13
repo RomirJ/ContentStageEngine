@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import WorkspaceManager from "@/components/WorkspaceManager";
 import QuoteGraphicsGenerator from "@/components/QuoteGraphicsGenerator";
-import { Settings, Globe, Image, Users, CreditCard } from "lucide-react";
+import { Settings as SettingsIcon, Globe, Image, Users, CreditCard } from "lucide-react";
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("workspaces");
@@ -14,7 +14,7 @@ export default function Settings() {
           {/* Header */}
           <div className="bg-white border-b border-gray-200 px-6 py-4">
             <div className="flex items-center gap-3">
-              <Settings className="h-6 w-6" />
+              <SettingsIcon className="h-6 w-6" />
               <h1 className="text-2xl font-bold">Settings</h1>
             </div>
           </div>
@@ -22,21 +22,21 @@ export default function Settings() {
           {/* Main Content */}
           <div className="flex-1 p-6">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-4 max-w-md">
-                <TabsTrigger value="workspaces" className="flex items-center gap-2">
-                  <Globe className="h-4 w-4" />
+              <TabsList>
+                <TabsTrigger value="workspaces">
+                  <Globe className="h-4 w-4 mr-2" />
                   Workspaces
                 </TabsTrigger>
-                <TabsTrigger value="graphics" className="flex items-center gap-2">
-                  <Image className="h-4 w-4" />
+                <TabsTrigger value="graphics">
+                  <Image className="h-4 w-4 mr-2" />
                   Graphics
                 </TabsTrigger>
-                <TabsTrigger value="team" className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
+                <TabsTrigger value="team">
+                  <Users className="h-4 w-4 mr-2" />
                   Team
                 </TabsTrigger>
-                <TabsTrigger value="billing" className="flex items-center gap-2">
-                  <CreditCard className="h-4 w-4" />
+                <TabsTrigger value="billing">
+                  <CreditCard className="h-4 w-4 mr-2" />
                   Billing
                 </TabsTrigger>
               </TabsList>
