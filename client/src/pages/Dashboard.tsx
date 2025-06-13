@@ -6,6 +6,7 @@ import StatsCards from "@/components/StatsCards";
 import UploadSection from "@/components/UploadSection";
 import ProcessingQueue from "@/components/ProcessingQueue";
 import RecentContent from "@/components/RecentContent";
+import SocialContent from "@/components/SocialContent";
 
 export default function Dashboard() {
   const { toast } = useToast();

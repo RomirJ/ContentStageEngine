@@ -41,6 +41,14 @@ export async function processFile(uploadId: string): Promise<void> {
     await processClipGeneration(segments);
     console.log(`Clip generation completed for upload ${uploadId}`);
 
+    // Step 4: Social Content Generation
+    await storage.updateUploadStatus(uploadId, 'generating_content');
+    console.log(`Generating social content for upload ${uploadId}`);
+    
+    const { processSocialContent } = await import('./processors/socialContent');
+    await processSocialContent(uploadId);
+    console.log(`Social content generation completed for upload ${uploadId}`);
+
     // Mark as completed
     await storage.updateUploadStatus(uploadId, 'completed');
     console.log(`Processing completed for upload ${uploadId}`);

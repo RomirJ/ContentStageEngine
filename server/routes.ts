@@ -131,12 +131,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const transcript = await storage.getTranscriptByUploadId(upload.id);
       const segments = await storage.getSegmentsByUploadId(upload.id);
       const clips = await storage.getClipsByUploadId(upload.id);
+      const socialPosts = await storage.getSocialPostsByUploadId(upload.id);
 
       res.json({
         ...upload,
         transcript,
         segments,
         clips,
+        socialPosts,
       });
     } catch (error) {
       console.error('Error fetching upload:', error);
@@ -172,6 +174,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching stats:', error);
       res.status(500).json({ message: 'Failed to fetch stats' });
+    }
+  });
+
+  // Social posts routes
+  app.get('/api/uploads/:id/social-posts', isAuthenticated, async (req: any, res) => {
+    try {
+      const uploadId = req.params.id;
+      const userId = req.user.claims.sub;
+      
+      const upload = await storage.getUpload(uploadId);
+      if (!upload || upload.userId !== userId) {
+        return res.status(404).json({ message: 'Upload not found' });
+      }
+      
+      const socialPosts = await storage.getSocialPostsByUploadId(uploadId);
+      res.json(socialPosts);
+    } catch (error) {
+      console.error('Error fetching social posts:', error);
+      res.status(500).json({ message: 'Failed to fetch social posts' });
+    }
+  });
+
+  app.patch('/api/social-posts/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const postId = req.params.id;
+      const { status, scheduledFor } = req.body;
+      
+      await storage.updateSocialPostStatus(postId, status);
+      
+      res.json({ message: 'Social post updated successfully' });
+    } catch (error) {
+      console.error('Error updating social post:', error);
+      res.status(500).json({ message: 'Failed to update social post' });
     }
   });
 
