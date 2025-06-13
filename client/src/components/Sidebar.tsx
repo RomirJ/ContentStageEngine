@@ -1,5 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 import { 
   Play, 
   Home, 
@@ -85,9 +86,11 @@ export default function Sidebar() {
         </div>
         
         <div className="flex space-x-2">
-          <Button variant="ghost" size="sm" className="flex-1">
-            <Settings className="w-4 h-4 mr-2" />
-            Settings
+          <Button variant="ghost" size="sm" className="flex-1" asChild>
+            <Link href="/settings">
+              <Settings className="w-4 h-4 mr-2" />
+              Settings
+            </Link>
           </Button>
           <Button variant="ghost" size="sm" onClick={handleLogout}>
             <LogOut className="w-4 h-4" />
