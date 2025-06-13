@@ -103,16 +103,6 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/login", (req, res, next) => {
     const strategyName = `replitauth:${req.hostname}`;
-    if (!passport._strategy(strategyName)) {
-      const firstStrategy = Object.keys(passport._strategies).find(key => key.startsWith('replitauth:'));
-      if (firstStrategy) {
-        passport.authenticate(firstStrategy, {
-          prompt: "login consent",
-          scope: ["openid", "email", "profile", "offline_access"],
-        })(req, res, next);
-        return;
-      }
-    }
     passport.authenticate(strategyName, {
       prompt: "login consent",
       scope: ["openid", "email", "profile", "offline_access"],
@@ -121,16 +111,6 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/callback", (req, res, next) => {
     const strategyName = `replitauth:${req.hostname}`;
-    if (!passport._strategy(strategyName)) {
-      const firstStrategy = Object.keys(passport._strategies).find(key => key.startsWith('replitauth:'));
-      if (firstStrategy) {
-        passport.authenticate(firstStrategy, {
-          successReturnToOrRedirect: "/",
-          failureRedirect: "/api/login",
-        })(req, res, next);
-        return;
-      }
-    }
     passport.authenticate(strategyName, {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",

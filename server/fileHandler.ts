@@ -67,7 +67,9 @@ export function validateFileType(mimeType: string): boolean {
     'video/mp4',
     'video/quicktime',
     'audio/mpeg',
-    'audio/wav'
+    'audio/wav',
+    'audio/mp3',
+    'application/octet-stream' // For files that aren't properly detected
   ];
   return allowedTypes.includes(mimeType);
 }
