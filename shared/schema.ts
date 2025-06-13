@@ -96,6 +96,19 @@ export const socialAccounts = pgTable("social_accounts", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const socialPosts = pgTable("social_posts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  segmentId: uuid("segment_id").references(() => segments.id, { onDelete: "cascade" }).notNull(),
+  platform: varchar("platform").notNull(), // 'tiktok', 'instagram', 'linkedin', 'twitter', 'instagram_graphic', etc.
+  content: text("content").notNull(),
+  scheduledFor: timestamp("scheduled_for"),
+  postedAt: timestamp("posted_at"),
+  status: varchar("status").notNull().default('draft'), // 'draft', 'scheduled', 'posted', 'failed'
+  engagement: jsonb("engagement"), // likes, shares, comments, etc.
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const scheduledPosts = pgTable("scheduled_posts", {
   id: uuid("id").primaryKey().defaultRandom(),
   clipId: uuid("clip_id").references(() => clips.id, { onDelete: "cascade" }).notNull(),
@@ -131,6 +144,14 @@ export const segmentsRelations = relations(segments, ({ one, many }) => ({
     references: [uploads.id],
   }),
   clips: many(clips),
+  socialPosts: many(socialPosts),
+}));
+
+export const socialPostsRelations = relations(socialPosts, ({ one }) => ({
+  segment: one(segments, {
+    fields: [socialPosts.segmentId],
+    references: [segments.id],
+  }),
 }));
 
 export const clipsRelations = relations(clips, ({ one, many }) => ({
@@ -161,6 +182,12 @@ export const insertClipSchema = createInsertSchema(clips).omit({
   createdAt: true,
 });
 
+export const insertSocialPostSchema = createInsertSchema(socialPosts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -172,5 +199,7 @@ export type Segment = typeof segments.$inferSelect;
 export type InsertSegment = z.infer<typeof insertSegmentSchema>;
 export type Clip = typeof clips.$inferSelect;
 export type InsertClip = z.infer<typeof insertClipSchema>;
+export type SocialPost = typeof socialPosts.$inferSelect;
+export type InsertSocialPost = z.infer<typeof insertSocialPostSchema>;
 export type SocialAccount = typeof socialAccounts.$inferSelect;
 export type ScheduledPost = typeof scheduledPosts.$inferSelect;

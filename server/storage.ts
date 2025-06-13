@@ -5,6 +5,7 @@ import {
   segments,
   clips,
   socialAccounts,
+  socialPosts,
   scheduledPosts,
   type User,
   type UpsertUser,
@@ -17,6 +18,8 @@ import {
   type Clip,
   type InsertClip,
   type SocialAccount,
+  type SocialPost,
+  type InsertSocialPost,
   type ScheduledPost,
 } from "@shared/schema";
 import { db } from "./db";
@@ -51,6 +54,12 @@ export interface IStorage {
   getUserSocialAccounts(userId: string): Promise<SocialAccount[]>;
   getSocialAccount(id: string): Promise<SocialAccount | undefined>;
   
+  // Social post operations
+  createSocialPost(socialPost: InsertSocialPost): Promise<SocialPost>;
+  getSocialPostsBySegmentId(segmentId: string): Promise<SocialPost[]>;
+  getSocialPostsByUploadId(uploadId: string): Promise<SocialPost[]>;
+  updateSocialPostStatus(id: string, status: string): Promise<void>;
+
   // Analytics
   getUserStats(userId: string): Promise<{
     totalUploads: number;
