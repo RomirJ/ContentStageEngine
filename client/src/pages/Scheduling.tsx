@@ -7,6 +7,7 @@ import SchedulingCalendar from "@/components/SchedulingCalendar";
 import SocialAccountsManager from "@/components/SocialAccountsManager";
 import PostingStatus from "@/components/PostingStatus";
 import EngagementDashboard from "@/components/EngagementDashboard";
+import { Navigation } from "@/components/Navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { CalendarIcon, Settings, BarChart3, Clock, Users } from "lucide-react";
@@ -103,10 +104,10 @@ export default function Scheduling() {
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
+      <Navigation title="Content Scheduling" />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Content Scheduling</h1>
           <p className="text-muted-foreground mt-1">
             Manage your social media calendar and connected accounts
           </p>

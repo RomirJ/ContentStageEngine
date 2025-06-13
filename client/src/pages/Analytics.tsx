@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import AnalyticsDashboard from "@/components/AnalyticsDashboard";
+import { Navigation } from "@/components/Navigation";
 
 export default function Analytics() {
   const { toast } = useToast();
@@ -39,6 +40,7 @@ export default function Analytics() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50">
           <div className="container mx-auto px-6 py-8">
+            <Navigation title="Analytics" />
             <AnalyticsDashboard />
           </div>
         </main>
