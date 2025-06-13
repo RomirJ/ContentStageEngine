@@ -1,0 +1,141 @@
+### AutoStage — End-to-End AI Content Replication & Revenue Engine
+
+*(Copy–paste everything below into Replit Ghostwriter, Cursor, or GPT-4o to scaffold the full codebase.)*
+
+---
+
+## 1 │ What AutoStage Must Do
+
+| Phase                               | Required Behaviour                                 | Key Details & APIs                                                                                                                                                                                                                                             |
+| ----------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A • Ingest + Transcribe**         | Upload a single MP4 / MOV / MP3 / WAV or raw text. | `POST /upload` → save to `uploads/` → OpenAI **Whisper** → JSON transcript (word-level timestamps).                                                                                                                                                            |
+| **B • Semantic Chunking**           | Turn transcript into 3–7 highlight segments.       | **GPT-4o** system prompt returns `[ { title, start, end, summary } ]`.                                                                                                                                                                                         |
+| **C • Derivative Generation**       | Produce child assets for each segment.             | 1️⃣ **Vertical Shorts** – FFmpeg trim + 9:16 resize + burned-in captions. 2️⃣ **Quote Graphics** – HTML→PNG (Canvas / Playwright). 3️⃣ **X / LinkedIn / IG text** – GPT-4o writes thread + captions. 4️⃣ **SEO Blog (1 000 w)** 5️⃣ **Newsletter (HTML+TXT)**. |
+| **D • Scheduling & Posting**        | Publish automatically to all platforms.            | - **TikTok Upload API**  - **YouTube Data v3**  - **IG/Facebook Graph**  - **LinkedIn v2**  - **X v2** (`/media/upload INIT/APPEND/FINALIZE` → `/tweets`).  <br>Jobs queued in BullMQ to respect rate-limits.                                                  |
+| **E • Engagement Loop**             | Listen to webhooks → draft replies.                | Webhooks (TikTok, YouTube, X Account-Activity) feed Supabase; GPT-4o drafts on-brand replies; owner one-click approves.                                                                                                                                        |
+| **F • Monetization Layer**          | Centralize revenue + sponsors + merch.             | Pull YT & TikTok creator revenue, Apollo/LinkedIn for sponsor leads; optional Shopify/Gumroad SKU injector.                                                                                                                                                    |
+| **G • Analytics + Weekly Insights** | Single funnel & AI insights.                       | Supabase view of views→likes→follows→\$ by asset; cron job emails PDF + GPT-4o commentary every Monday.                                                                                                                                                        |
+
+---
+
+## 2 │ Ideal Tech Stack (MVP)
+
+| Layer                   | Choice                                                        | Reason                                             |
+| ----------------------- | ------------------------------------------------------------- | -------------------------------------------------- |
+| **Dev IDE**             | **Replit (Ghostwriter) for rapid code-gen**                   | Zero setup; live preview; AI pair-programming.     |
+| **Frontend**            | **Next.js 14 + TypeScript + Tailwind + shadcn/ui**            | Server Components, file-upload UI, fast styling.   |
+| **Backend API**         | **Fastify (TypeScript)**                                      | Ultra-fast JSON, schema validation, good with ESM. |
+| **Auth + DB + Storage** | **Supabase** (Postgres + Row-Level-Security + Storage + Auth) | One service for users, JWT, signed video URLs.     |
+| **AI Services**         | **OpenAI Whisper** (STT) • **GPT-4o** (LLM)                   | Best quality, single vendor key.                   |
+| **Video Ops**           | **FFmpeg** via `fluent-ffmpeg`                                | Trim, resize, caption, convert.                    |
+| **Queues / Workers**    | **BullMQ (Redis)**                                            | Retry logic, concurrency control, delayed jobs.    |
+| **Workers Hosting**     | **Railway** (Dockerized Node workers)                         | Long-running FFmpeg + GPT tasks separate from API. |
+| **Frontend Hosting**    | **Vercel**                                                    | Instant Next.js deploys, edge caching.             |
+| **CI / CD**             | GitHub Actions (`turbo run lint test build`)                  | Type-check + unit tests before deploy.             |
+| **Observability**       | **Pino** logs → Railway, Upstash Redis metrics                | Simple, low-cost insight.                          |
+
+> **Local Dev** = Replit. **Prod** = Vercel (frontend) + Railway (API & workers) + Supabase (DB/Auth/Storage).
+
+---
+
+## 3 │ Minimal Folder Blueprint
+
+```
+autostage/
+ ├ apps/
+ │   ├ web/            # Next.js FE
+ │   └ api/            # Fastify BE
+ ├ packages/
+ │   ├ lib-ai/         # whisper.ts, gpt.ts
+ │   ├ lib-ffmpeg/     # clipper.ts, captions.ts
+ │   └ ui/             # shared React comps
+ ├ infra/
+ │   ├ supabase/       # SQL migrations
+ │   └ docker/         # worker Dockerfile
+ ├ .env.example
+ ├ turborepo.json
+ └ README.md
+```
+
+---
+
+## 4 │ Essential Supabase Tables
+
+```sql
+-- users handled by Supabase Auth
+
+create table uploads (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users on delete cascade,
+  source_url text,
+  status text default 'uploaded',
+  created_at timestamptz default now()
+);
+
+create table transcripts (
+  id uuid primary key default gen_random_uuid(),
+  upload_id uuid references uploads(id) on delete cascade,
+  text text,
+  meta jsonb,
+  created_at timestamptz default now()
+);
+
+create table segments (
+  id uuid primary key default gen_random_uuid(),
+  upload_id uuid references uploads(id) on delete cascade,
+  title text,
+  start numeric,
+  "end" numeric,
+  summary text
+);
+
+create table clips (
+  id uuid primary key default gen_random_uuid(),
+  segment_id uuid references segments(id),
+  file_url text,
+  start numeric,
+  "end" numeric
+);
+
+-- X integration
+create table x_accounts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users on delete cascade,
+  x_user_id text,
+  access_token text,
+  refresh_token text,
+  expires_at timestamptz
+);
+
+create table x_posts (
+  id uuid primary key default gen_random_uuid(),
+  upload_id uuid references uploads(id) on delete cascade,
+  x_tweet_id text,
+  thread_root_id text,
+  text text,
+  media_ids jsonb,
+  posted_at timestamptz,
+  status text default 'queued',
+  metrics jsonb
+);
+```
+
+---
+
+## 5 │ Replit Prompt (Ready to Paste)
+
+> **“Scaffold the AutoStage monorepo exactly as follows:**
+> • Yarn workspaces: `apps/web`, `apps/api`, `packages/lib-ai`, `packages/lib-ffmpeg`, `packages/ui`.
+> • Fastify + TypeScript API in `apps/api` with routes:
+> `POST /upload` → save file, enqueue `transcribe`.
+> `GET /uploads/:id` → return status + clip URLs.
+> • BullMQ queues: `transcribe`, `segment`, `clip`, `post_x`.
+> • Workers in `apps/api/workers/` with shared `libs`.
+> • Supabase SQL migrations per schema above.
+> • Next.js dashboard in `apps/web` with drag-and-drop upload, polling progress, clip gallery.
+> • Implement X posting: OAuth 2.0 PKCE, chunked `/2/media/upload` INIT/APPEND/FINALIZE, then `/2/tweets` thread create.
+> • Provide `.env.example` for OpenAI, Supabase, Redis, X creds.
+> • Use Vitest + Supertest for unit + API tests.
+> • Output the complete file tree then each file in triple back-ticks. End with “### DONE”.\*\*”
+
+Paste this into **Replit Ghostwriter** (or Cursor/GPT-4o), press **Generate**, and you’ll receive the full, runnable AutoStage MVP skeleton — ready to test, refine, and deploy.
