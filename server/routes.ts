@@ -177,6 +177,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/analytics/report', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { days = 30 } = req.query;
+      
+      const endDate = new Date();
+      const startDate = new Date(endDate.getTime() - parseInt(days as string) * 24 * 60 * 60 * 1000);
+      
+      const { analyticsService } = await import('./analyticsService');
+      const report = await analyticsService.generateReport(userId, startDate, endDate);
+      
+      res.json(report);
+    } catch (error) {
+      console.error('Error generating analytics report:', error);
+      res.status(500).json({ message: 'Failed to generate analytics report' });
+    }
+  });
+
+  app.get('/api/analytics/heatmap', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { days = 30 } = req.query;
+      
+      const { analyticsService } = await import('./analyticsService');
+      const heatmap = await analyticsService.getEngagementHeatmap(userId, parseInt(days as string));
+      
+      res.json(heatmap);
+    } catch (error) {
+      console.error('Error fetching engagement heatmap:', error);
+      res.status(500).json({ message: 'Failed to fetch engagement heatmap' });
+    }
+  });
+
+  app.get('/api/analytics/funnel', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { days = 30 } = req.query;
+      
+      const { analyticsService } = await import('./analyticsService');
+      const funnel = await analyticsService.getFunnelMetrics(userId, parseInt(days as string));
+      
+      res.json(funnel);
+    } catch (error) {
+      console.error('Error fetching funnel metrics:', error);
+      res.status(500).json({ message: 'Failed to fetch funnel metrics' });
+    }
+  });
+
+  app.post('/api/analytics/sync', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { platform } = req.body;
+      
+      // Trigger manual sync of analytics data
+      const { analyticsService } = await import('./analyticsService');
+      const endDate = new Date();
+      const startDate = new Date(endDate.getTime() - 7 * 24 * 60 * 60 * 1000); // Last 7 days
+      
+      await analyticsService.generateReport(userId, startDate, endDate);
+      
+      res.json({ success: true, message: 'Analytics data synced successfully' });
+    } catch (error) {
+      console.error('Error syncing analytics:', error);
+      res.status(500).json({ message: 'Failed to sync analytics data' });
+    }
+  });
+
   // Social posts routes
   app.get('/api/uploads/:id/social-posts', isAuthenticated, async (req: any, res) => {
     try {
