@@ -64,6 +64,11 @@ app.use((req, res, next) => {
   postingService.startScheduler(5); // Check every 5 minutes
   console.log('[AutoStage] Automated posting service started');
 
+  // Start the engagement monitoring service
+  const { engagementService } = await import('./engagementService');
+  engagementService.startWebhookListening();
+  console.log('[AutoStage] Engagement monitoring service started');
+
   const port = 5000;
   server.listen({
     port,
