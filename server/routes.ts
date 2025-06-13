@@ -1117,6 +1117,181 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Engagement loop endpoints
+  app.post('/api/webhooks/:platform', async (req: any, res) => {
+    try {
+      const { platform } = req.params;
+      const payload = req.body;
+      
+      const { engagementService } = await import('./engagementService');
+      await engagementService.processWebhookEvent(platform, payload);
+      
+      res.status(200).json({ success: true, message: 'Webhook processed' });
+    } catch (error) {
+      console.error(`Error processing ${req.params.platform} webhook:`, error);
+      res.status(500).json({ message: 'Webhook processing failed' });
+    }
+  });
+
+  app.get('/api/engagement/replies/pending', isAuthenticated, async (req: any, res) => {
+    try {
+      const { engagementService } = await import('./engagementService');
+      const pendingReplies = await engagementService.getReplyDrafts();
+      
+      res.json(pendingReplies.filter(reply => reply.status === 'pending'));
+    } catch (error) {
+      console.error('Error fetching pending replies:', error);
+      res.status(500).json({ message: 'Failed to fetch pending replies' });
+    }
+  });
+
+  app.post('/api/engagement/replies/:replyId/approve', isAuthenticated, async (req: any, res) => {
+    try {
+      const { replyId } = req.params;
+      
+      const { engagementService } = await import('./engagementService');
+      await engagementService.approveReply(replyId);
+      
+      res.json({ success: true, message: 'Reply approved and posted' });
+    } catch (error) {
+      console.error('Error approving reply:', error);
+      res.status(500).json({ message: 'Failed to approve reply' });
+    }
+  });
+
+  app.post('/api/engagement/replies/:replyId/reject', isAuthenticated, async (req: any, res) => {
+    try {
+      const { replyId } = req.params;
+      
+      const { engagementService } = await import('./engagementService');
+      await engagementService.rejectReply(replyId);
+      
+      res.json({ success: true, message: 'Reply rejected' });
+    } catch (error) {
+      console.error('Error rejecting reply:', error);
+      res.status(500).json({ message: 'Failed to reject reply' });
+    }
+  });
+
+  app.put('/api/engagement/replies/:replyId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { replyId } = req.params;
+      const { content } = req.body;
+      
+      if (!content) {
+        return res.status(400).json({ message: 'Content is required' });
+      }
+      
+      const { engagementService } = await import('./engagementService');
+      await engagementService.editReply(replyId, content);
+      
+      res.json({ success: true, message: 'Reply updated' });
+    } catch (error) {
+      console.error('Error editing reply:', error);
+      res.status(500).json({ message: 'Failed to edit reply' });
+    }
+  });
+
+  app.get('/api/engagement/digest', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { hours } = req.query;
+      
+      const { engagementService } = await import('./engagementService');
+      const digest = await engagementService.getEngagementDigest(userId, hours ? parseInt(hours as string) : 24);
+      
+      res.json(digest);
+    } catch (error) {
+      console.error('Error generating engagement digest:', error);
+      res.status(500).json({ message: 'Failed to generate engagement digest' });
+    }
+  });
+
+  app.get('/api/engagement/breakouts', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { days } = req.query;
+      
+      // Get posts with breakout performance (top 10%)
+      const posts = await storage.getSocialPostsByUserId(userId);
+      const recentPosts = posts.filter(post => {
+        const daysAgo = days ? parseInt(days as string) : 7;
+        const cutoff = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
+        return post.createdAt && new Date(post.createdAt) > cutoff;
+      });
+      
+      // Calculate engagement scores and find top 10%
+      const postsWithScores = recentPosts.map(post => {
+        const engagement = (post.engagement as any) || {};
+        const metrics = engagement.metrics || {};
+        const totalEngagement = (metrics.likes || 0) + (metrics.comments || 0) + (metrics.shares || 0);
+        const views = metrics.views || 1;
+        const engagementRate = (totalEngagement / views) * 100;
+        
+        return {
+          ...post,
+          engagementScore: engagementRate,
+          totalEngagement,
+          isBreakout: false
+        };
+      });
+      
+      // Sort by engagement score and mark top 10%
+      postsWithScores.sort((a, b) => b.engagementScore - a.engagementScore);
+      const top10PercentCount = Math.ceil(postsWithScores.length * 0.1);
+      
+      for (let i = 0; i < top10PercentCount; i++) {
+        postsWithScores[i].isBreakout = true;
+      }
+      
+      const breakoutPosts = postsWithScores.filter(post => post.isBreakout);
+      
+      res.json({
+        breakoutPosts,
+        totalPosts: recentPosts.length,
+        breakoutCount: breakoutPosts.length,
+        averageEngagement: postsWithScores.reduce((sum, post) => sum + post.engagementScore, 0) / postsWithScores.length || 0
+      });
+    } catch (error) {
+      console.error('Error fetching breakout content:', error);
+      res.status(500).json({ message: 'Failed to fetch breakout content' });
+    }
+  });
+
+  app.post('/api/engagement/boost/:postId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { postId } = req.params;
+      const { budget, platforms } = req.body;
+      
+      if (!budget || !platforms) {
+        return res.status(400).json({ message: 'Budget and platforms are required' });
+      }
+      
+      // Simulate ad boost creation
+      const boostCampaign = {
+        id: `boost_${Date.now()}`,
+        postId,
+        budget,
+        platforms,
+        status: 'active',
+        startDate: new Date().toISOString(),
+        estimatedReach: budget * 100, // Rough estimate
+        createdAt: new Date().toISOString()
+      };
+      
+      console.log(`[EngagementService] Created ad boost campaign:`, boostCampaign);
+      
+      res.json({
+        success: true,
+        campaign: boostCampaign,
+        message: `Ad boost campaign created with $${budget} budget`
+      });
+    } catch (error) {
+      console.error('Error creating ad boost:', error);
+      res.status(500).json({ message: 'Failed to create ad boost' });
+    }
+  });
+
   // Social posts routes
   app.get('/api/uploads/:id/social-posts', isAuthenticated, async (req: any, res) => {
     try {
