@@ -244,6 +244,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Engagement webhook endpoints
+  app.post('/api/webhooks/twitter', async (req, res) => {
+    try {
+      const { engagementService } = await import('./engagementService');
+      await engagementService.processWebhookEvent('twitter', req.body);
+      res.status(200).send('OK');
+    } catch (error) {
+      console.error('Twitter webhook error:', error);
+      res.status(500).json({ message: 'Webhook processing failed' });
+    }
+  });
+
+  app.post('/api/webhooks/linkedin', async (req, res) => {
+    try {
+      const { engagementService } = await import('./engagementService');
+      await engagementService.processWebhookEvent('linkedin', req.body);
+      res.status(200).send('OK');
+    } catch (error) {
+      console.error('LinkedIn webhook error:', error);
+      res.status(500).json({ message: 'Webhook processing failed' });
+    }
+  });
+
+  app.post('/api/webhooks/instagram', async (req, res) => {
+    try {
+      const { engagementService } = await import('./engagementService');
+      await engagementService.processWebhookEvent('instagram', req.body);
+      res.status(200).send('OK');
+    } catch (error) {
+      console.error('Instagram webhook error:', error);
+      res.status(500).json({ message: 'Webhook processing failed' });
+    }
+  });
+
+  // Engagement management routes
+  app.get('/api/engagement/digest', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { hours = 24 } = req.query;
+      
+      const { engagementService } = await import('./engagementService');
+      const digest = await engagementService.getEngagementDigest(userId, parseInt(hours as string));
+      
+      res.json(digest);
+    } catch (error) {
+      console.error('Error fetching engagement digest:', error);
+      res.status(500).json({ message: 'Failed to fetch engagement digest' });
+    }
+  });
+
+  app.get('/api/engagement/replies', isAuthenticated, async (req: any, res) => {
+    try {
+      const { engagementService } = await import('./engagementService');
+      const replies = await engagementService.getReplyDrafts();
+      
+      res.json(replies);
+    } catch (error) {
+      console.error('Error fetching reply drafts:', error);
+      res.status(500).json({ message: 'Failed to fetch reply drafts' });
+    }
+  });
+
+  app.post('/api/engagement/replies/:id/approve', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      const { engagementService } = await import('./engagementService');
+      await engagementService.approveReply(id);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error approving reply:', error);
+      res.status(500).json({ message: 'Failed to approve reply' });
+    }
+  });
+
+  app.post('/api/engagement/replies/:id/reject', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      const { engagementService } = await import('./engagementService');
+      await engagementService.rejectReply(id);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error rejecting reply:', error);
+      res.status(500).json({ message: 'Failed to reject reply' });
+    }
+  });
+
+  app.patch('/api/engagement/replies/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { content } = req.body;
+      
+      const { engagementService } = await import('./engagementService');
+      await engagementService.editReply(id, content);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error editing reply:', error);
+      res.status(500).json({ message: 'Failed to edit reply' });
+    }
+  });
+
   // Social posts routes
   app.get('/api/uploads/:id/social-posts', isAuthenticated, async (req: any, res) => {
     try {

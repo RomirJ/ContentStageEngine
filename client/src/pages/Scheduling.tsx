@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import SchedulingCalendar from "@/components/SchedulingCalendar";
 import SocialAccountsManager from "@/components/SocialAccountsManager";
 import PostingStatus from "@/components/PostingStatus";
+import EngagementDashboard from "@/components/EngagementDashboard";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { CalendarIcon, Settings, BarChart3, Clock, Users } from "lucide-react";
@@ -182,7 +183,7 @@ export default function Scheduling() {
         {/* Calendar and Settings */}
         <div className="xl:col-span-3">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="calendar" className="flex items-center gap-2">
                 <CalendarIcon className="h-4 w-4" />
                 Calendar
@@ -194,6 +195,10 @@ export default function Scheduling() {
               <TabsTrigger value="status" className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4" />
                 Status
+              </TabsTrigger>
+              <TabsTrigger value="engagement" className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Engagement
               </TabsTrigger>
             </TabsList>
 
@@ -207,6 +212,10 @@ export default function Scheduling() {
 
             <TabsContent value="status" className="mt-6">
               <PostingStatus />
+            </TabsContent>
+
+            <TabsContent value="engagement" className="mt-6">
+              <EngagementDashboard />
             </TabsContent>
           </Tabs>
         </div>
