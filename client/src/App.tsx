@@ -10,6 +10,7 @@ import Scheduling from "@/pages/Scheduling";
 import Analytics from "@/pages/Analytics";
 import Monetization from "@/pages/Monetization";
 import Settings from "@/pages/Settings";
+import ShortsGenerator from "@/pages/ShortsGenerator";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -26,6 +27,7 @@ function Router() {
           <Route path="/scheduling" component={Scheduling} />
           <Route path="/analytics" component={Analytics} />
           <Route path="/monetization" component={Monetization} />
+          <Route path="/shorts" component={ShortsGenerator} />
           <Route path="/settings" component={Settings} />
         </>
       )}
