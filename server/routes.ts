@@ -19,13 +19,13 @@ const upload = multer({
   limits: {
     fileSize: 500 * 1024 * 1024, // 500MB
   },
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = ['video/mp4', 'video/quicktime', 'audio/mpeg', 'audio/wav', 'audio/mp3'];
-    if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid file type. Only MP4, MOV, MP3, and WAV files are allowed.'));
-    }
+});
+
+// Create a separate upload instance for testing without file type restrictions
+const testUpload = multer({
+  dest: uploadDir,
+  limits: {
+    fileSize: 500 * 1024 * 1024, // 500MB
   },
 });
 
@@ -51,13 +51,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Test upload endpoint (temporary - no auth required)
-  app.post('/api/test-upload', upload.single('file'), async (req: any, res) => {
+  app.post('/api/test-upload', testUpload.single('file'), async (req: any, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
       }
 
-      console.log('Test upload received:', req.file);
+      console.log('Test upload received - MIME type:', req.file.mimetype, 'Original name:', req.file.originalname);
       
       const result = await fileUpload.handleUpload(req.file, 'test-user');
       res.json(result);
