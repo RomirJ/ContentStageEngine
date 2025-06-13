@@ -1651,6 +1651,537 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Chunked Upload Routes
+  app.post('/api/upload/chunked/youtube/init', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { filePath, title, description, tags, categoryId, privacyStatus } = req.body;
+      
+      if (!filePath || !title) {
+        return res.status(400).json({ error: 'filePath and title are required' });
+      }
+      
+      const { chunkedUploadHelpers } = await import('./chunkedUploadHelpers');
+      const session = await chunkedUploadHelpers.initializeYouTubeUpload(userId, filePath, {
+        title,
+        description,
+        tags,
+        categoryId,
+        privacyStatus
+      });
+      
+      res.json(session);
+    } catch (error) {
+      console.error('Error initializing YouTube upload:', error);
+      res.status(500).json({ error: 'Failed to initialize YouTube upload' });
+    }
+  });
+
+  app.post('/api/upload/chunked/youtube/chunk', isAuthenticated, async (req: any, res) => {
+    try {
+      const { sessionId, filePath, chunkIndex } = req.body;
+      
+      if (!sessionId || !filePath || chunkIndex === undefined) {
+        return res.status(400).json({ error: 'sessionId, filePath, and chunkIndex are required' });
+      }
+      
+      const { chunkedUploadHelpers } = await import('./chunkedUploadHelpers');
+      const result = await chunkedUploadHelpers.uploadYouTubeChunk(sessionId, filePath, parseInt(chunkIndex));
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error uploading YouTube chunk:', error);
+      res.status(500).json({ error: 'Failed to upload YouTube chunk' });
+    }
+  });
+
+  app.post('/api/upload/chunked/twitter/init', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { filePath, mediaType } = req.body;
+      
+      if (!filePath || !mediaType) {
+        return res.status(400).json({ error: 'filePath and mediaType are required' });
+      }
+      
+      const { chunkedUploadHelpers } = await import('./chunkedUploadHelpers');
+      const session = await chunkedUploadHelpers.initializeXUpload(userId, filePath, mediaType);
+      
+      res.json(session);
+    } catch (error) {
+      console.error('Error initializing X upload:', error);
+      res.status(500).json({ error: 'Failed to initialize X upload' });
+    }
+  });
+
+  app.post('/api/upload/chunked/twitter/chunk', isAuthenticated, async (req: any, res) => {
+    try {
+      const { sessionId, filePath, chunkIndex } = req.body;
+      
+      if (!sessionId || !filePath || chunkIndex === undefined) {
+        return res.status(400).json({ error: 'sessionId, filePath, and chunkIndex are required' });
+      }
+      
+      const { chunkedUploadHelpers } = await import('./chunkedUploadHelpers');
+      const result = await chunkedUploadHelpers.uploadXChunk(sessionId, filePath, parseInt(chunkIndex));
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error uploading X chunk:', error);
+      res.status(500).json({ error: 'Failed to upload X chunk' });
+    }
+  });
+
+  app.post('/api/upload/chunked/twitter/finalize', isAuthenticated, async (req: any, res) => {
+    try {
+      const { sessionId } = req.body;
+      
+      if (!sessionId) {
+        return res.status(400).json({ error: 'sessionId is required' });
+      }
+      
+      const { chunkedUploadHelpers } = await import('./chunkedUploadHelpers');
+      const result = await chunkedUploadHelpers.finalizeXUpload(sessionId);
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error finalizing X upload:', error);
+      res.status(500).json({ error: 'Failed to finalize X upload' });
+    }
+  });
+
+  app.post('/api/upload/chunked/tiktok/init', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { filePath } = req.body;
+      
+      if (!filePath) {
+        return res.status(400).json({ error: 'filePath is required' });
+      }
+      
+      const { chunkedUploadHelpers } = await import('./chunkedUploadHelpers');
+      const session = await chunkedUploadHelpers.initializeTikTokUpload(userId, filePath);
+      
+      res.json(session);
+    } catch (error) {
+      console.error('Error initializing TikTok upload:', error);
+      res.status(500).json({ error: 'Failed to initialize TikTok upload' });
+    }
+  });
+
+  app.post('/api/upload/chunked/tiktok/chunk', isAuthenticated, async (req: any, res) => {
+    try {
+      const { sessionId, filePath, chunkIndex } = req.body;
+      
+      if (!sessionId || !filePath || chunkIndex === undefined) {
+        return res.status(400).json({ error: 'sessionId, filePath, and chunkIndex are required' });
+      }
+      
+      const { chunkedUploadHelpers } = await import('./chunkedUploadHelpers');
+      const result = await chunkedUploadHelpers.uploadTikTokChunk(sessionId, filePath, parseInt(chunkIndex));
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error uploading TikTok chunk:', error);
+      res.status(500).json({ error: 'Failed to upload TikTok chunk' });
+    }
+  });
+
+  app.get('/api/upload/chunked/session/:sessionId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { sessionId } = req.params;
+      
+      const { chunkedUploadHelpers } = await import('./chunkedUploadHelpers');
+      const session = chunkedUploadHelpers.getUploadSession(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ error: 'Upload session not found' });
+      }
+      
+      const progress = chunkedUploadHelpers.getUploadProgress(sessionId);
+      
+      res.json({ session, progress });
+    } catch (error) {
+      console.error('Error getting upload session:', error);
+      res.status(500).json({ error: 'Failed to get upload session' });
+    }
+  });
+
+  // Weekly Report Routes
+  app.post('/api/reports/weekly/generate', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { weekOffset } = req.body;
+      
+      const { weeklyReportGenerator } = await import('./weeklyReportGenerator');
+      const report = await weeklyReportGenerator.generateWeeklyReport(userId, weekOffset || 0);
+      
+      res.json({
+        success: true,
+        reportPath: report.filePath,
+        emailSubject: report.emailSubject,
+        emailPreview: report.emailBody.substring(0, 200) + '...'
+      });
+    } catch (error) {
+      console.error('Error generating weekly report:', error);
+      res.status(500).json({ error: 'Failed to generate weekly report' });
+    }
+  });
+
+  app.get('/api/reports/weekly/download/:fileName', isAuthenticated, async (req: any, res) => {
+    try {
+      const { fileName } = req.params;
+      const userId = req.user.claims.sub;
+      
+      // Verify user owns this report
+      if (!fileName.includes(`-${userId}-week-`)) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+      
+      const filePath = `./reports/${fileName}`;
+      
+      if (!require('fs').existsSync(filePath)) {
+        return res.status(404).json({ error: 'Report not found' });
+      }
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+      res.sendFile(require('path').resolve(filePath));
+    } catch (error) {
+      console.error('Error downloading report:', error);
+      res.status(500).json({ error: 'Failed to download report' });
+    }
+  });
+
+  app.get('/api/reports/weekly/history', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { limit } = req.query;
+      
+      const { weeklyReportGenerator } = await import('./weeklyReportGenerator');
+      const history = await weeklyReportGenerator.getReportHistory(userId, limit ? parseInt(limit as string) : 10);
+      
+      res.json(history);
+    } catch (error) {
+      console.error('Error getting report history:', error);
+      res.status(500).json({ error: 'Failed to get report history' });
+    }
+  });
+
+  // Breakout Detection Routes
+  app.get('/api/breakouts/alerts', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { limit } = req.query;
+      
+      const { breakoutDetectorService } = await import('./breakoutDetector');
+      const alerts = await breakoutDetectorService.getBreakoutAlerts(userId, limit ? parseInt(limit as string) : 10);
+      
+      res.json(alerts);
+    } catch (error) {
+      console.error('Error getting breakout alerts:', error);
+      res.status(500).json({ error: 'Failed to get breakout alerts' });
+    }
+  });
+
+  app.post('/api/breakouts/alerts/:alertId/acknowledge', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { alertId } = req.params;
+      
+      const { breakoutDetectorService } = await import('./breakoutDetector');
+      await breakoutDetectorService.acknowledgeAlert(userId, alertId);
+      
+      res.json({ success: true, message: 'Alert acknowledged' });
+    } catch (error) {
+      console.error('Error acknowledging alert:', error);
+      res.status(500).json({ error: 'Failed to acknowledge alert' });
+    }
+  });
+
+  app.get('/api/breakouts/stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { days } = req.query;
+      
+      const { breakoutDetectorService } = await import('./breakoutDetector');
+      const stats = await breakoutDetectorService.getBreakoutStats(userId, days ? parseInt(days as string) : 30);
+      
+      res.json(stats);
+    } catch (error) {
+      console.error('Error getting breakout stats:', error);
+      res.status(500).json({ error: 'Failed to get breakout stats' });
+    }
+  });
+
+  // CTA Management Routes
+  app.post('/api/cta/create', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const ctaData = req.body;
+      
+      if (!ctaData.name || !ctaData.url || !ctaData.type) {
+        return res.status(400).json({ error: 'name, url, and type are required' });
+      }
+      
+      const { ctaService } = await import('./ctaService');
+      const cta = await ctaService.createCTA(userId, ctaData);
+      
+      res.json(cta);
+    } catch (error) {
+      console.error('Error creating CTA:', error);
+      res.status(500).json({ error: 'Failed to create CTA' });
+    }
+  });
+
+  app.get('/api/cta/list', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const { ctaService } = await import('./ctaService');
+      const ctas = await ctaService.getUserCTAs(userId);
+      
+      res.json(ctas);
+    } catch (error) {
+      console.error('Error getting CTAs:', error);
+      res.status(500).json({ error: 'Failed to get CTAs' });
+    }
+  });
+
+  app.put('/api/cta/:ctaId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { ctaId } = req.params;
+      const updates = req.body;
+      
+      const { ctaService } = await import('./ctaService');
+      const cta = await ctaService.updateCTA(userId, ctaId, updates);
+      
+      if (!cta) {
+        return res.status(404).json({ error: 'CTA not found' });
+      }
+      
+      res.json(cta);
+    } catch (error) {
+      console.error('Error updating CTA:', error);
+      res.status(500).json({ error: 'Failed to update CTA' });
+    }
+  });
+
+  app.delete('/api/cta/:ctaId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { ctaId } = req.params;
+      
+      const { ctaService } = await import('./ctaService');
+      const success = await ctaService.deleteCTA(userId, ctaId);
+      
+      if (!success) {
+        return res.status(404).json({ error: 'CTA not found' });
+      }
+      
+      res.json({ success: true, message: 'CTA deleted' });
+    } catch (error) {
+      console.error('Error deleting CTA:', error);
+      res.status(500).json({ error: 'Failed to delete CTA' });
+    }
+  });
+
+  app.post('/api/cta/track/click', isAuthenticated, async (req: any, res) => {
+    try {
+      const { ctaId, postId, platform } = req.body;
+      
+      if (!ctaId || !postId || !platform) {
+        return res.status(400).json({ error: 'ctaId, postId, and platform are required' });
+      }
+      
+      const { ctaService } = await import('./ctaService');
+      await ctaService.trackCTAClick(ctaId, postId, platform);
+      
+      res.json({ success: true, message: 'Click tracked' });
+    } catch (error) {
+      console.error('Error tracking CTA click:', error);
+      res.status(500).json({ error: 'Failed to track click' });
+    }
+  });
+
+  app.post('/api/cta/track/conversion', isAuthenticated, async (req: any, res) => {
+    try {
+      const { ctaId, postId, platform, revenue } = req.body;
+      
+      if (!ctaId || !postId || !platform) {
+        return res.status(400).json({ error: 'ctaId, postId, and platform are required' });
+      }
+      
+      const { ctaService } = await import('./ctaService');
+      await ctaService.trackCTAConversion(ctaId, postId, platform, revenue || 0);
+      
+      res.json({ success: true, message: 'Conversion tracked' });
+    } catch (error) {
+      console.error('Error tracking CTA conversion:', error);
+      res.status(500).json({ error: 'Failed to track conversion' });
+    }
+  });
+
+  app.get('/api/cta/performance', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { days } = req.query;
+      
+      const { ctaService } = await import('./ctaService');
+      const performance = await ctaService.getCTAPerformance(userId, days ? parseInt(days as string) : 30);
+      
+      res.json(performance);
+    } catch (error) {
+      console.error('Error getting CTA performance:', error);
+      res.status(500).json({ error: 'Failed to get CTA performance' });
+    }
+  });
+
+  // Brand Voice Management Routes
+  app.post('/api/brand-voice/create', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profileData = req.body;
+      
+      if (!profileData.name || !profileData.sampleTexts || !profileData.characteristics) {
+        return res.status(400).json({ error: 'name, sampleTexts, and characteristics are required' });
+      }
+      
+      const { brandVoiceService } = await import('./brandVoiceService');
+      const profile = await brandVoiceService.createVoiceProfile(userId, profileData);
+      
+      res.json(profile);
+    } catch (error) {
+      console.error('Error creating voice profile:', error);
+      res.status(500).json({ error: 'Failed to create voice profile' });
+    }
+  });
+
+  app.get('/api/brand-voice/profiles', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const { brandVoiceService } = await import('./brandVoiceService');
+      const profiles = await brandVoiceService.getUserVoiceProfiles(userId);
+      
+      res.json(profiles);
+    } catch (error) {
+      console.error('Error getting voice profiles:', error);
+      res.status(500).json({ error: 'Failed to get voice profiles' });
+    }
+  });
+
+  app.get('/api/brand-voice/active', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const { brandVoiceService } = await import('./brandVoiceService');
+      const profile = await brandVoiceService.getActiveVoiceProfile(userId);
+      
+      res.json(profile);
+    } catch (error) {
+      console.error('Error getting active voice profile:', error);
+      res.status(500).json({ error: 'Failed to get active voice profile' });
+    }
+  });
+
+  app.put('/api/brand-voice/:profileName', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { profileName } = req.params;
+      const updates = req.body;
+      
+      const { brandVoiceService } = await import('./brandVoiceService');
+      const profile = await brandVoiceService.updateVoiceProfile(userId, profileName, updates);
+      
+      if (!profile) {
+        return res.status(404).json({ error: 'Voice profile not found' });
+      }
+      
+      res.json(profile);
+    } catch (error) {
+      console.error('Error updating voice profile:', error);
+      res.status(500).json({ error: 'Failed to update voice profile' });
+    }
+  });
+
+  app.post('/api/brand-voice/analyze', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { content, targetProfile } = req.body;
+      
+      if (!content) {
+        return res.status(400).json({ error: 'content is required' });
+      }
+      
+      const { brandVoiceService } = await import('./brandVoiceService');
+      const analysis = await brandVoiceService.analyzeContentVoiceMatch(userId, content, targetProfile);
+      
+      res.json(analysis);
+    } catch (error) {
+      console.error('Error analyzing voice match:', error);
+      res.status(500).json({ error: 'Failed to analyze voice match' });
+    }
+  });
+
+  app.post('/api/brand-voice/adapt', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { content, platform, profileName } = req.body;
+      
+      if (!content || !platform) {
+        return res.status(400).json({ error: 'content and platform are required' });
+      }
+      
+      const { brandVoiceService } = await import('./brandVoiceService');
+      const adaptedContent = await brandVoiceService.adaptContentForPlatform(userId, content, platform, profileName);
+      
+      res.json({ adaptedContent });
+    } catch (error) {
+      console.error('Error adapting content for platform:', error);
+      res.status(500).json({ error: 'Failed to adapt content' });
+    }
+  });
+
+  app.post('/api/brand-voice/learn', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { content, profileName } = req.body;
+      
+      if (!content) {
+        return res.status(400).json({ error: 'content is required' });
+      }
+      
+      const { brandVoiceService } = await import('./brandVoiceService');
+      await brandVoiceService.learnFromContent(userId, content, profileName);
+      
+      res.json({ success: true, message: 'Content learned successfully' });
+    } catch (error) {
+      console.error('Error learning from content:', error);
+      res.status(500).json({ error: 'Failed to learn from content' });
+    }
+  });
+
+  app.post('/api/brand-voice/process', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { content, platform } = req.body;
+      
+      if (!content || !platform) {
+        return res.status(400).json({ error: 'content and platform are required' });
+      }
+      
+      const { brandVoiceService } = await import('./brandVoiceService');
+      const processedContent = await brandVoiceService.processContentWithVoice(userId, content, platform);
+      
+      res.json({ processedContent });
+    } catch (error) {
+      console.error('Error processing content with voice:', error);
+      res.status(500).json({ error: 'Failed to process content' });
+    }
+  });
+
   // Social posts routes
   app.get('/api/uploads/:id/social-posts', isAuthenticated, async (req: any, res) => {
     try {
