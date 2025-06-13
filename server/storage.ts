@@ -228,6 +228,52 @@ export class DatabaseStorage implements IStorage {
       totalEngagement: 0, // Placeholder for now
     };
   }
+
+  // Social post operations
+  async createSocialPost(socialPostData: InsertSocialPost): Promise<SocialPost> {
+    const [socialPost] = await db
+      .insert(socialPosts)
+      .values(socialPostData)
+      .returning();
+    return socialPost;
+  }
+
+  async getSocialPostsBySegmentId(segmentId: string): Promise<SocialPost[]> {
+    return await db
+      .select()
+      .from(socialPosts)
+      .where(eq(socialPosts.segmentId, segmentId))
+      .orderBy(desc(socialPosts.createdAt));
+  }
+
+  async getSocialPostsByUploadId(uploadId: string): Promise<SocialPost[]> {
+    const results = await db
+      .select({
+        id: socialPosts.id,
+        segmentId: socialPosts.segmentId,
+        platform: socialPosts.platform,
+        content: socialPosts.content,
+        scheduledFor: socialPosts.scheduledFor,
+        postedAt: socialPosts.postedAt,
+        status: socialPosts.status,
+        engagement: socialPosts.engagement,
+        createdAt: socialPosts.createdAt,
+        updatedAt: socialPosts.updatedAt,
+      })
+      .from(socialPosts)
+      .innerJoin(segments, eq(socialPosts.segmentId, segments.id))
+      .where(eq(segments.uploadId, uploadId))
+      .orderBy(desc(socialPosts.createdAt));
+    
+    return results;
+  }
+
+  async updateSocialPostStatus(id: string, status: string): Promise<void> {
+    await db
+      .update(socialPosts)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(socialPosts.id, id));
+  }
 }
 
 export const storage = new DatabaseStorage();

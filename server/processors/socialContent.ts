@@ -32,8 +32,17 @@ export async function processSocialContent(uploadId: string) {
 
 async function generateContentForSegment(segment: Segment, platform: string) {
   try {
+    // Convert segment to SegmentResult format for OpenAI functions
+    const segmentResult = {
+      title: segment.title,
+      summary: segment.summary || '',
+      startTime: parseInt(segment.startTime),
+      endTime: parseInt(segment.endTime),
+      transcript: segment.transcript || '',
+    };
+
     // Generate text content
-    const content = await generateSocialContent(segment, platform);
+    const content = await generateSocialContent(segmentResult, platform);
     
     // Create social post record
     await storage.createSocialPost({
@@ -47,7 +56,7 @@ async function generateContentForSegment(segment: Segment, platform: string) {
     // Generate quote graphic for visual platforms
     if (['instagram', 'linkedin', 'twitter'].includes(platform)) {
       try {
-        const quoteGraphic = await generateQuoteGraphic(segment);
+        const quoteGraphic = await generateQuoteGraphic(segmentResult);
         
         await storage.createSocialPost({
           segmentId: segment.id,
@@ -57,11 +66,11 @@ async function generateContentForSegment(segment: Segment, platform: string) {
           scheduledFor: null,
         });
       } catch (graphicError) {
-        console.warn(`Quote graphic generation failed for ${platform}:`, graphicError);
+        console.warn(`Quote graphic generation failed for ${platform}:`, graphicError.message);
       }
     }
 
-  } catch (error) {
-    console.error(`Content generation failed for segment ${segment.id} on ${platform}:`, error);
+  } catch (error: any) {
+    console.error(`Content generation failed for segment ${segment.id} on ${platform}:`, error.message);
   }
 }
