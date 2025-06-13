@@ -27,8 +27,8 @@ export function getSession() {
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
-    createTableIfMissing: false,
-    ttl: sessionTtl,
+    createTableIfMissing: true,
+    ttl: sessionTtl / 1000, // Convert to seconds
     tableName: "sessions",
   });
   return session({
@@ -102,14 +102,36 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
-    passport.authenticate(`replitauth:${req.hostname}`, {
+    const strategyName = `replitauth:${req.hostname}`;
+    if (!passport._strategy(strategyName)) {
+      const firstStrategy = Object.keys(passport._strategies).find(key => key.startsWith('replitauth:'));
+      if (firstStrategy) {
+        passport.authenticate(firstStrategy, {
+          prompt: "login consent",
+          scope: ["openid", "email", "profile", "offline_access"],
+        })(req, res, next);
+        return;
+      }
+    }
+    passport.authenticate(strategyName, {
       prompt: "login consent",
       scope: ["openid", "email", "profile", "offline_access"],
     })(req, res, next);
   });
 
   app.get("/api/callback", (req, res, next) => {
-    passport.authenticate(`replitauth:${req.hostname}`, {
+    const strategyName = `replitauth:${req.hostname}`;
+    if (!passport._strategy(strategyName)) {
+      const firstStrategy = Object.keys(passport._strategies).find(key => key.startsWith('replitauth:'));
+      if (firstStrategy) {
+        passport.authenticate(firstStrategy, {
+          successReturnToOrRedirect: "/",
+          failureRedirect: "/api/login",
+        })(req, res, next);
+        return;
+      }
+    }
+    passport.authenticate(strategyName, {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
     })(req, res, next);
