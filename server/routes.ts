@@ -45,6 +45,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test upload endpoint (temporary - no auth required)
+  app.post('/api/test-upload', upload.single('file'), async (req: any, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      console.log('Test upload received:', req.file);
+      
+      const result = await fileUpload.handleUpload(req.file, 'test-user');
+      res.json(result);
+    } catch (error) {
+      console.error('Test upload error:', error);
+      res.status(500).json({ error: 'Upload failed' });
+    }
+  });
+
   // Upload routes
   app.post('/api/upload', isAuthenticated, upload.single('file'), async (req: any, res) => {
     try {

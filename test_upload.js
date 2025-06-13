@@ -1,6 +1,9 @@
 // Simple test script to validate upload functionality
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Create a simple test audio file content (WAV header + silence)
 const createTestWavFile = () => {
