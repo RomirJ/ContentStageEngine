@@ -1503,6 +1503,154 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Revenue Tracking Routes
+  app.get('/api/revenue/platforms', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { startDate, endDate } = req.query;
+      
+      const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const end = endDate ? new Date(endDate as string) : new Date();
+      
+      const { revenueTrackingService } = await import('./revenueTracking');
+      const revenueData = await revenueTrackingService.fetchAllPlatformRevenue(userId, start, end);
+      
+      res.json(revenueData);
+    } catch (error) {
+      console.error('Error fetching platform revenue:', error);
+      res.status(500).json({ error: 'Failed to fetch platform revenue' });
+    }
+  });
+
+  app.get('/api/revenue/video/:videoId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { videoId } = req.params;
+      const { platform } = req.query;
+      
+      if (!platform) {
+        return res.status(400).json({ error: 'Platform parameter required' });
+      }
+      
+      const { revenueTrackingService } = await import('./revenueTracking');
+      const videoRevenue = await revenueTrackingService.trackVideoRevenue(userId, videoId, platform as string);
+      
+      res.json(videoRevenue);
+    } catch (error) {
+      console.error('Error tracking video revenue:', error);
+      res.status(500).json({ error: 'Failed to track video revenue' });
+    }
+  });
+
+  app.get('/api/revenue/report', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { startDate, endDate } = req.query;
+      
+      const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const end = endDate ? new Date(endDate as string) : new Date();
+      
+      const { revenueTrackingService } = await import('./revenueTracking');
+      const report = await revenueTrackingService.generateRevenueReport(userId, start, end);
+      
+      res.json(report);
+    } catch (error) {
+      console.error('Error generating revenue report:', error);
+      res.status(500).json({ error: 'Failed to generate revenue report' });
+    }
+  });
+
+  // Sponsorship Prospecting Routes
+  app.post('/api/sponsorship/find-prospects', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { contentNiche, audienceSize, location } = req.body;
+      
+      if (!contentNiche || !audienceSize) {
+        return res.status(400).json({ error: 'contentNiche and audienceSize are required' });
+      }
+      
+      const { sponsorshipProspectingService } = await import('./sponsorshipProspecting');
+      const prospects = await sponsorshipProspectingService.findSponsors(
+        userId, 
+        contentNiche, 
+        parseInt(audienceSize), 
+        location
+      );
+      
+      res.json(prospects);
+    } catch (error) {
+      console.error('Error finding sponsors:', error);
+      if (error instanceof Error && error.message.includes('Apollo API key')) {
+        res.status(400).json({ error: 'Apollo API key not configured. Please contact support to enable sponsorship prospecting.' });
+      } else {
+        res.status(500).json({ error: 'Failed to find sponsors' });
+      }
+    }
+  });
+
+  app.post('/api/sponsorship/generate-pitch', isAuthenticated, async (req: any, res) => {
+    try {
+      const { prospect, userMetrics, contentNiche } = req.body;
+      
+      if (!prospect || !userMetrics || !contentNiche) {
+        return res.status(400).json({ error: 'prospect, userMetrics, and contentNiche are required' });
+      }
+      
+      const { sponsorshipProspectingService } = await import('./sponsorshipProspecting');
+      const pitch = await sponsorshipProspectingService.generateSponsorshipPitch(
+        prospect, 
+        userMetrics, 
+        contentNiche
+      );
+      
+      res.json(pitch);
+    } catch (error) {
+      console.error('Error generating sponsorship pitch:', error);
+      res.status(500).json({ error: 'Failed to generate sponsorship pitch' });
+    }
+  });
+
+  app.post('/api/sponsorship/track-interaction', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { prospectId, interaction } = req.body;
+      
+      if (!prospectId || !interaction) {
+        return res.status(400).json({ error: 'prospectId and interaction are required' });
+      }
+      
+      const { sponsorshipProspectingService } = await import('./sponsorshipProspecting');
+      await sponsorshipProspectingService.trackProspectInteractions(userId, prospectId, {
+        ...interaction,
+        timestamp: new Date()
+      });
+      
+      res.json({ success: true, message: 'Interaction tracked' });
+    } catch (error) {
+      console.error('Error tracking prospect interaction:', error);
+      res.status(500).json({ error: 'Failed to track interaction' });
+    }
+  });
+
+  app.get('/api/sponsorship/report', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { startDate, endDate } = req.query;
+      
+      const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const end = endDate ? new Date(endDate as string) : new Date();
+      
+      const { sponsorshipProspectingService } = await import('./sponsorshipProspecting');
+      const report = await sponsorshipProspectingService.generateProspectingReport(userId, start, end);
+      
+      res.json(report);
+    } catch (error) {
+      console.error('Error generating prospecting report:', error);
+      res.status(500).json({ error: 'Failed to generate prospecting report' });
+    }
+  });
+
   // Social posts routes
   app.get('/api/uploads/:id/social-posts', isAuthenticated, async (req: any, res) => {
     try {

@@ -1,0 +1,129 @@
+### AutoStage – Comprehensive Feature List
+
+*(Grouped by functional area for quick scanning)*
+
+---
+
+#### 1. Ingestion
+
+* **Drag-and-drop uploader** (video, audio, or raw text) with resumable chunked upload
+* **Accepted formats:** MP4, MOV, MP3, WAV, TXT/RTF/MD
+* **Instant “seed preview”** player after upload
+* **Upload progress & ETA** with cancel / resume
+* **Automatic media-type validation** & max-size guard (configurable)
+* **Per-asset `upload_id`** for tracking through every pipeline stage
+
+---
+
+#### 2. Transcription & Pre-Processing
+
+* **OpenAI Whisper v2** speech-to-text with language detection
+* **Word-level timestamps & confidence scores** stored in Supabase
+* **Speaker diarization** (optional AssemblyAI fallback)
+* **Noise-filtering & loudness normalization** via FFmpeg pre-pass
+
+---
+
+#### 3. Semantic Chunking & AI Analysis
+
+* **GPT-4o “hook finder”** → 3–7 high-impact segments (title, start, end, summary)
+* **Quote & stat extractor** for graphic overlays
+* **Emotion & topic tagging** (vector stored for analytics)
+* **Brand-voice matching** using per-user embedding average
+
+---
+
+#### 4. Derivative Asset Generation
+
+| Asset                             | Automation Details                                                            |
+| --------------------------------- | ----------------------------------------------------------------------------- |
+| **Vertical Shorts**               | FFmpeg trim, 9:16 resize, burned-in SRT captions, optional b-roll intro/outro |
+| **Quote Graphics / IG Carousels** | HTML/CSS → PNG via Playwright/Canvas; auto-branded colors & logo              |
+| **X / LinkedIn / IG posts**       | GPT-4o writes main hook + threaded follow-ups, hashtag strategy               |
+| **SEO Blog Draft**                | 1 000-word article, H2/H3 headings, FAQ, meta description                     |
+| **Newsletter Issue**              | Plain-text + responsive HTML (Substack/ConvertKit ready)                      |
+| **Thumbnail Generator**           | Canva-style template with bold text & auto-selected frame                     |
+
+---
+
+#### 5. Scheduling & Multi-Platform Publishing
+
+* **BullMQ queues per platform** (`post_youtube`, `post_tiktok`, `post_x`, etc.)
+* **Best-time rules library** (configurable by time-zone & vertical)
+* **OAuth 2.0 (or 1.0a) token store** with auto-refresh & expiry alerts
+* **Chunked media upload helpers** (YouTube Resumable, X INIT/APPEND/FINALIZE, TikTok multipart)
+* **Calendar view + drag-to-reorder queue**
+* **Manual override / one-click “post now”**
+
+---
+
+#### 6. Engagement Loop
+
+* **Real-time webhooks** for likes, comments, views, retweets, shares
+* **GPT-4o on-brand reply drafts** (approve / edit / reject)
+* **Breakout detector** – flags top 10 % engagement clips and can queue ad-boost spend
+* **Smart notification digest** (“3 comments awaiting reply”)
+
+---
+
+#### 7. Monetization Layer
+
+* **Revenue pull** from YouTube Analytics & TikTok Creator Center
+* **Sponsorship prospecting** via Apollo/LinkedIn search → GPT-crafted cold email + deck snippet
+* **Auto-insert CTA / merch link** (Shopify or Gumroad SKU) into captions & comments
+* **Per-asset CPM / RPM tracking** with trend graphs
+
+---
+
+#### 8. Analytics & Reporting
+
+* **Cross-platform funnel dashboard** (views → likes → follows → \$)
+* **Clip heat-map** of watch-time drop-off vs. hook duration
+* **Weekly PDF + email digest** with GPT-written insights & action items
+* **Export to CSV / Google Sheets**
+* **Role-based access** (client vs. team)
+
+---
+
+#### 9. User & Project Management
+
+* **Multi-brand/persona workspaces** (Studio tier: up to 10)
+* **Role permissions:** owner, editor, analyst, sponsor-viewer
+* **Billing & usage metering** per pipeline / asset / platform call
+* **In-app onboarding checklist & sample content**
+
+---
+
+#### 10. Infrastructure & DevOps
+
+* **Fastify API with Zod schemas** (+ Swagger docs)
+* **BullMQ retry / back-off / dead-letter queues**
+* **Supabase Row-Level Security** & signed-media URLs
+* **Redis-based rate-limit counters per platform**
+* **GitHub Actions CI (lint · typecheck · unit tests) + Turbo cache**
+* **Dockerized worker image** for Railway auto-scale
+* **Structured Pino logs + Upstash metrics**
+* **Feature-flag service** (Supabase `feature_flags` table)
+
+---
+
+#### 11. Compliance & Safety
+
+* **Copyright assertion checkbox** + automatic hash lookup for known assets
+* **Platform-policy abstraction layer** (handles new quota or TOS changes)
+* **GDPR/CCPA data-erasure endpoint**
+* **Access-token encryption at rest (AES-256 via Supabase KMS)**
+
+---
+
+#### 12. Extensibility & Future Flags
+
+* **Plugin interface** for new platforms (Twitch Clips, Reddit, Pinterest)
+* **Multilingual dubbing & subtitle export** (Whisper translate + SRT/VTT)
+* **On-device mobile capture app** (upload + analytics only)
+* **A/B hook tester** – generates two clip intros, posts both, auto-picks winner
+* **AI-powered ad-script generator** for YouTube AdSense split tests
+
+---
+
+##### This list captures **every feature** specified in your spec—including the new X (Twitter) publishing flow—plus supporting infrastructure, security, and roadmap hooks.
