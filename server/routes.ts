@@ -1292,6 +1292,217 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhanced Upload System Routes
+  app.post('/api/uploads/initialize', isAuthenticated, async (req: any, res) => {
+    const { uploadService } = await import('./uploadService');
+    await uploadService.initializeUpload(req, res);
+  });
+
+  app.post('/api/uploads/:uploadId/chunk', isAuthenticated, async (req: any, res) => {
+    const { uploadService, uploadChunkMiddleware } = await import('./uploadService');
+    uploadChunkMiddleware(req, res, async (error) => {
+      if (error) {
+        return res.status(400).json({ error: 'Invalid chunk data' });
+      }
+      await uploadService.uploadChunk(req, res);
+    });
+  });
+
+  app.get('/api/uploads/:uploadId/progress', isAuthenticated, async (req: any, res) => {
+    const { uploadService } = await import('./uploadService');
+    await uploadService.getUploadProgress(req, res);
+  });
+
+  app.post('/api/uploads/:uploadId/cancel', isAuthenticated, async (req: any, res) => {
+    const { uploadService } = await import('./uploadService');
+    await uploadService.handleCancelUpload(req, res);
+  });
+
+  app.post('/api/uploads/:uploadId/resume', isAuthenticated, async (req: any, res) => {
+    const { uploadService } = await import('./uploadService');
+    await uploadService.resumeUpload(req, res);
+  });
+
+  // OAuth 2.0 Management Routes
+  app.get('/api/oauth/:platform/auth-url', isAuthenticated, async (req: any, res) => {
+    try {
+      const { platform } = req.params;
+      const { state } = req.query;
+      
+      const { oauthService } = await import('./oauthService');
+      const authUrl = oauthService.generateAuthUrl(platform, state as string);
+      
+      res.json({ authUrl });
+    } catch (error) {
+      console.error('Error generating auth URL:', error);
+      res.status(500).json({ error: 'Failed to generate auth URL' });
+    }
+  });
+
+  app.post('/api/oauth/:platform/callback', isAuthenticated, async (req: any, res) => {
+    try {
+      const { platform } = req.params;
+      const { code } = req.body;
+      const userId = req.user.claims.sub;
+      
+      const { oauthService } = await import('./oauthService');
+      const token = await oauthService.exchangeCodeForToken(platform, code, userId);
+      
+      res.json({ success: true, platform, expires: token.expiresAt });
+    } catch (error) {
+      console.error('Error exchanging OAuth code:', error);
+      res.status(500).json({ error: 'Failed to exchange authorization code' });
+    }
+  });
+
+  app.post('/api/oauth/:platform/revoke', isAuthenticated, async (req: any, res) => {
+    try {
+      const { platform } = req.params;
+      const userId = req.user.claims.sub;
+      
+      const { oauthService } = await import('./oauthService');
+      await oauthService.revokeToken(userId, platform);
+      
+      res.json({ success: true, message: 'Token revoked successfully' });
+    } catch (error) {
+      console.error('Error revoking token:', error);
+      res.status(500).json({ error: 'Failed to revoke token' });
+    }
+  });
+
+  // Cross-Platform Funnel Analytics Routes
+  app.get('/api/analytics/funnel', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { startDate, endDate } = req.query;
+      
+      const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const end = endDate ? new Date(endDate as string) : new Date();
+      
+      const { funnelAnalyticsService } = await import('./funnelAnalytics');
+      const report = await funnelAnalyticsService.generateFunnelReport(userId, start, end);
+      
+      res.json(report);
+    } catch (error) {
+      console.error('Error generating funnel report:', error);
+      res.status(500).json({ error: 'Failed to generate funnel report' });
+    }
+  });
+
+  app.get('/api/analytics/funnel/export', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { format, startDate, endDate } = req.query;
+      
+      const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const end = endDate ? new Date(endDate as string) : new Date();
+      
+      const { funnelAnalyticsService } = await import('./funnelAnalytics');
+      const exportData = await funnelAnalyticsService.exportFunnelData(
+        userId, 
+        (format as 'csv' | 'json') || 'csv', 
+        start, 
+        end
+      );
+      
+      res.setHeader('Content-Type', exportData.contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${exportData.filename}"`);
+      res.send(exportData.data);
+    } catch (error) {
+      console.error('Error exporting funnel data:', error);
+      res.status(500).json({ error: 'Failed to export funnel data' });
+    }
+  });
+
+  app.get('/api/analytics/realtime', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const { funnelAnalyticsService } = await import('./funnelAnalytics');
+      const metrics = await funnelAnalyticsService.getRealtimeMetrics(userId);
+      
+      res.json(metrics);
+    } catch (error) {
+      console.error('Error fetching realtime metrics:', error);
+      res.status(500).json({ error: 'Failed to fetch realtime metrics' });
+    }
+  });
+
+  // Billing & Usage Routes
+  app.get('/api/billing/usage', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { period } = req.query;
+      
+      const { billingService } = await import('./billingService');
+      const usage = await billingService.getUsageMetrics(userId, period as string);
+      
+      res.json(usage);
+    } catch (error) {
+      console.error('Error fetching usage metrics:', error);
+      res.status(500).json({ error: 'Failed to fetch usage metrics' });
+    }
+  });
+
+  app.get('/api/billing/bill', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { period } = req.query;
+      
+      const { billingService } = await import('./billingService');
+      const bill = await billingService.calculateBill(userId, period as string);
+      
+      res.json(bill);
+    } catch (error) {
+      console.error('Error calculating bill:', error);
+      res.status(500).json({ error: 'Failed to calculate bill' });
+    }
+  });
+
+  app.get('/api/billing/invoice', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { period } = req.query;
+      
+      const { billingService } = await import('./billingService');
+      const invoice = await billingService.generateInvoice(userId, period as string);
+      
+      res.json(invoice);
+    } catch (error) {
+      console.error('Error generating invoice:', error);
+      res.status(500).json({ error: 'Failed to generate invoice' });
+    }
+  });
+
+  app.get('/api/billing/upgrade-suggestions', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const { billingService } = await import('./billingService');
+      const suggestions = await billingService.getUpgradeSuggestions(userId);
+      
+      res.json(suggestions);
+    } catch (error) {
+      console.error('Error getting upgrade suggestions:', error);
+      res.status(500).json({ error: 'Failed to get upgrade suggestions' });
+    }
+  });
+
+  app.post('/api/billing/usage/record', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { type, amount } = req.body;
+      
+      const { billingService } = await import('./billingService');
+      await billingService.recordUsage(userId, type, amount);
+      
+      res.json({ success: true, message: 'Usage recorded' });
+    } catch (error) {
+      console.error('Error recording usage:', error);
+      res.status(500).json({ error: 'Failed to record usage' });
+    }
+  });
+
   // Social posts routes
   app.get('/api/uploads/:id/social-posts', isAuthenticated, async (req: any, res) => {
     try {
