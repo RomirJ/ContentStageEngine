@@ -275,7 +275,7 @@ export class StripeService {
 
       if (existing) {
         const updateData: any = { updatedAt: new Date() };
-        updateData[type] = (existing[type] || 0) + amount;
+        updateData[type] = Number(existing[type] || 0) + amount;
         
         await db
           .update(usageRecords)
@@ -372,8 +372,8 @@ export class StripeService {
       .update(subscriptions)
       .set({
         status: stripeSubscription.status,
-        currentPeriodStart: new Date(stripeSubscription.current_period_start * 1000),
-        currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000),
+        currentPeriodStart: new Date((stripeSubscription as any).current_period_start * 1000),
+        currentPeriodEnd: new Date((stripeSubscription as any).current_period_end * 1000),
         cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
       })
       .where(eq(subscriptions.stripeSubscriptionId, stripeSubscription.id));
@@ -386,14 +386,17 @@ export class StripeService {
 
     if (!userId) return;
 
-    await db.insert(invoices).values({
-      userId,
-      stripeInvoiceId: invoice.id,
-      amount: invoice.amount_paid,
-      currency: invoice.currency,
-      status: 'paid',
-      paidAt: new Date(invoice.status_transitions.paid_at! * 1000),
-    });
+    // Only record actual paid invoices with real data
+    if (invoice.status === 'paid' && invoice.amount_paid && invoice.amount_paid > 0) {
+      await db.insert(invoices).values({
+        userId,
+        stripeInvoiceId: invoice.id,
+        amount: invoice.amount_paid,
+        currency: invoice.currency || 'usd',
+        status: 'paid',
+        paidAt: new Date((invoice.status_transitions as any)?.paid_at * 1000),
+      });
+    }
   }
 
   private async handleFailedPayment(invoice: Stripe.Invoice): Promise<void> {
