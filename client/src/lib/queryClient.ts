@@ -11,7 +11,7 @@ export async function apiRequest(
   arg1: string,
   arg2: string | RequestInit,
   arg3?: unknown,
-): Promise<Response> {
+): Promise<any> {
   let url: string;
   let init: RequestInit = { credentials: "include" };
 
@@ -36,7 +36,7 @@ export async function apiRequest(
   const res = await fetch(url, init);
 
   await throwIfResNotOk(res);
-  return res;
+  return await res.json();
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

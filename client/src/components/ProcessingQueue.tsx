@@ -1,11 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
+
+interface ProcessingItem {
+  id: string;
+  originalName: string;
+  status: string;
+}
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Video, Mic, Clock, CheckCircle, AlertCircle } from "lucide-react";
 
 export default function ProcessingQueue() {
-  const { data: processingItems, isLoading } = useQuery({
+  const { data: processingItems = [], isLoading } = useQuery<ProcessingItem[]>({
     queryKey: ["/api/processing-status"],
     refetchInterval: 3000, // Refresh every 3 seconds
   });

@@ -117,7 +117,7 @@ export class StripeService {
       // Validate price ID exists in our tiers
       const validPriceIds = Object.values(SUBSCRIPTION_TIERS)
         .map(tier => tier.priceId)
-        .filter(id => id !== null);
+        .filter((id): id is NonNullable<typeof id> => id !== null);
       
       if (!validPriceIds.includes(priceId)) {
         throw new Error(`Invalid price ID: ${priceId}. Please create the price in your Stripe dashboard first.`);
@@ -389,13 +389,15 @@ export class StripeService {
     // Only record actual paid invoices with real data
     if (invoice.status === 'paid' && invoice.amount_paid && invoice.amount_paid > 0) {
       await db.insert(invoices).values({
-        userId,
+        userId: userId!,
         stripeInvoiceId: invoice.id,
         amount: invoice.amount_paid,
         currency: invoice.currency || 'usd',
         status: 'paid',
-        paidAt: new Date((invoice.status_transitions as any)?.paid_at * 1000),
-      });
+        paidAt: invoice.status_transitions?.paid_at
+          ? new Date((invoice.status_transitions as any).paid_at * 1000)
+          : undefined,
+      } as any);
     }
   }
 

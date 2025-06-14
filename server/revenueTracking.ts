@@ -176,7 +176,10 @@ export class RevenueTrackingService {
         const metrics = await api.fetchRevenue(accessToken, startDate, endDate);
         platformBreakdown[platform] = metrics;
 
-        const platformTotal = metrics.reduce((sum, metric) => sum + metric.earnings, 0);
+        const platformTotal = metrics.reduce(
+          (sum: number, metric: RevenueMetrics) => sum + metric.earnings,
+          0
+        );
         totalRevenue += platformTotal;
 
         if (platformTotal > bestPlatformRevenue) {

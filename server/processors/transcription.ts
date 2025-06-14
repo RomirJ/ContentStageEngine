@@ -30,7 +30,8 @@ export async function processTranscription(upload: Upload) {
     return transcript;
     
   } catch (error) {
-    console.error(`Transcription failed for upload ${upload.id}:`, error);
-    throw new Error(`Transcription failed: ${error.message}`);
+    const err = error as Error;
+    console.error(`Transcription failed for upload ${upload.id}:`, err);
+    throw new Error(`Transcription failed: ${err.message}`);
   }
 }
