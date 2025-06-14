@@ -154,8 +154,8 @@ export class StripeService {
         stripeSubscriptionId: subscription.id,
         stripePriceId: priceId,
         status: subscription.status,
-        currentPeriodStart: new Date(subscription.current_period_start * 1000),
-        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+        currentPeriodStart: new Date((subscription as any).current_period_start * 1000),
+        currentPeriodEnd: new Date((subscription as any).current_period_end * 1000),
       });
 
       // Update user subscription info
@@ -169,8 +169,8 @@ export class StripeService {
         })
         .where(eq(users.id, userId));
 
-      const invoice = subscription.latest_invoice as Stripe.Invoice;
-      const paymentIntent = invoice.payment_intent as Stripe.PaymentIntent;
+      const invoice = subscription.latest_invoice as any;
+      const paymentIntent = invoice?.payment_intent as any;
 
       return {
         clientSecret: paymentIntent.client_secret!,

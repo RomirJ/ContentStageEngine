@@ -2561,6 +2561,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create new social post with validation
+  app.post('/api/social-posts', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { segmentId, platform, content, scheduledFor } = req.body;
+      
+      // Validation: Require content for posting
+      if (!content || content.trim().length === 0) {
+        return res.status(400).json({ 
+          message: "Post content is required. Cannot schedule empty posts." 
+        });
+      }
+      
+      // Validation: Require segment association for content posts
+      if (!segmentId) {
+        return res.status(400).json({ 
+          message: "Content must be associated with a processed video segment." 
+        });
+      }
+      
+      // Verify segment exists and belongs to user
+      const segment = await storage.getSegment(segmentId);
+      if (!segment) {
+        return res.status(400).json({ 
+          message: "Invalid segment. Please select content from an uploaded video." 
+        });
+      }
+      
+      // Verify user owns the upload containing this segment
+      const upload = await storage.getUpload(segment.uploadId);
+      if (!upload || upload.userId !== userId) {
+        return res.status(403).json({ 
+          message: "Access denied. This content belongs to another user." 
+        });
+      }
+      
+      const postData = { 
+        userId, 
+        segmentId, 
+        platform, 
+        content: content.trim(), 
+        scheduledFor,
+        status: scheduledFor ? 'scheduled' : 'draft'
+      };
+      
+      const post = await storage.createSocialPost(postData);
+      res.json(post);
+    } catch (error) {
+      console.error("Error creating social post:", error);
+      res.status(500).json({ message: "Failed to create social post" });
+    }
+  });
+
   // Manual posting routes
   app.post('/api/social-posts/:id/publish', isAuthenticated, async (req: any, res) => {
     try {

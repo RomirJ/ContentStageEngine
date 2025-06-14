@@ -157,6 +157,14 @@ export class DatabaseStorage implements IStorage {
       .orderBy(segments.order);
   }
 
+  async getSegment(segmentId: string): Promise<Segment | null> {
+    const [segment] = await db
+      .select()
+      .from(segments)
+      .where(eq(segments.id, segmentId));
+    return segment || null;
+  }
+
   // Clip operations
   async createClip(clip: InsertClip): Promise<Clip> {
     const [newClip] = await db.insert(clips).values(clip).returning();
