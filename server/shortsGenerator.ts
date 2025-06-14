@@ -73,41 +73,42 @@ export class ShortsGenerator {
       const endTime = parseFloat(segment.endTime);
       const duration = endTime - startTime;
       
+      // Prepare command first
+      let command = ffmpeg(originalVideoPath)
+        .seekInput(startTime)
+        .duration(duration)
+        // Resize and crop to 9:16 vertical format
+        .videoFilters([
+          `scale=${finalConfig.width}:${finalConfig.height}:force_original_aspect_ratio=increase`,
+          `crop=${finalConfig.width}:${finalConfig.height}`,
+          // Burn in subtitles
+          `subtitles=${srtPath}:force_style='FontSize=${finalConfig.subtitleStyle.fontsize},FontName=${finalConfig.subtitleStyle.fontfamily},PrimaryColour=${this.convertColorToASS(finalConfig.subtitleStyle.fontcolor)},OutlineColour=${this.convertColorToASS(finalConfig.subtitleStyle.boxcolor)},BorderStyle=3,Outline=${finalConfig.subtitleStyle.boxborderw}'`
+        ])
+        // Output settings optimized for social media
+        .videoCodec('libx264')
+        .audioCodec('aac')
+        .audioBitrate('128k')
+        .videoBitrate('2000k')
+        .fps(30)
+        .format('mp4')
+        .outputOptions([
+          '-preset fast',
+          '-crf 23',
+          '-movflags +faststart'
+        ]);
+
+      // Add intro/outro if configured
+      if (finalConfig.introOutroConfig?.intro || finalConfig.introOutroConfig?.outro) {
+        command = await this.addIntroOutro(command, finalConfig.introOutroConfig, outputDir);
+      }
+
       return new Promise((resolve, reject) => {
-        let command = ffmpeg(originalVideoPath)
-          .seekInput(startTime)
-          .duration(duration)
-          // Resize and crop to 9:16 vertical format
-          .videoFilters([
-            `scale=${finalConfig.width}:${finalConfig.height}:force_original_aspect_ratio=increase`,
-            `crop=${finalConfig.width}:${finalConfig.height}`,
-            // Burn in subtitles
-            `subtitles=${srtPath}:force_style='FontSize=${finalConfig.subtitleStyle.fontsize},FontName=${finalConfig.subtitleStyle.fontfamily},PrimaryColour=${this.convertColorToASS(finalConfig.subtitleStyle.fontcolor)},OutlineColour=${this.convertColorToASS(finalConfig.subtitleStyle.boxcolor)},BorderStyle=3,Outline=${finalConfig.subtitleStyle.boxborderw}'`
-          ])
-          // Output settings optimized for social media
-          .videoCodec('libx264')
-          .audioCodec('aac')
-          .audioBitrate('128k')
-          .videoBitrate('2000k')
-          .fps(30)
-          .format('mp4')
-          .outputOptions([
-            '-preset fast',
-            '-crf 23',
-            '-movflags +faststart'
-          ]);
-
-        // Add intro/outro if configured
-        if (finalConfig.introOutroConfig?.intro || finalConfig.introOutroConfig?.outro) {
-          command = await this.addIntroOutro(command, finalConfig.introOutroConfig, outputDir);
-        }
-
         command
           .output(outputPath)
-          .on('start', (commandLine) => {
+          .on('start', (commandLine: string) => {
             console.log(`[ShortsGenerator] Starting FFmpeg process: ${commandLine}`);
           })
-          .on('progress', (progress) => {
+          .on('progress', (progress: { percent?: number }) => {
             console.log(`[ShortsGenerator] Processing: ${Math.round(progress.percent || 0)}% done`);
           })
           .on('end', async () => {
@@ -129,7 +130,7 @@ export class ShortsGenerator {
               reject(error);
             }
           })
-          .on('error', (error) => {
+          .on('error', (error: Error) => {
             console.error('[ShortsGenerator] FFmpeg error:', error);
             reject(error);
           })
@@ -234,13 +235,13 @@ export class ShortsGenerator {
     format: string;
   }> {
     return new Promise((resolve, reject) => {
-      ffmpeg.ffprobe(videoPath, (err, metadata) => {
+      ffmpeg.ffprobe(videoPath, (err: any, metadata: any) => {
         if (err) {
           reject(err);
           return;
         }
         
-        const videoStream = metadata.streams.find(stream => stream.codec_type === 'video');
+        const videoStream = metadata.streams.find((stream: any) => stream.codec_type === 'video');
         if (!videoStream) {
           reject(new Error('No video stream found'));
           return;
