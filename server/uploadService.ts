@@ -228,7 +228,6 @@ class UploadService {
 
       // Create upload record in storage
       await storage.createUpload({
-        id: uploadId,
         userId: 'current_user', // Would get from auth context
         filename: chunkInfo.filename,
         filePath: finalPath,

@@ -516,8 +516,8 @@ export class UserManagementService {
 
     // Calculate overages
     const overages: Record<string, number> = {};
-    if (currentPeriod.metrics.uploads > planLimits.uploads) {
-      overages.uploads = currentPeriod.metrics.uploads - planLimits.uploads;
+    if (currentPeriod.metrics.uploadsCount > planLimits.uploads) {
+      overages.uploads = currentPeriod.metrics.uploadsCount - planLimits.uploads;
     }
     if (currentPeriod.metrics.transcriptionMinutes > planLimits.transcriptionMinutes) {
       overages.transcriptionMinutes = currentPeriod.metrics.transcriptionMinutes - planLimits.transcriptionMinutes;
