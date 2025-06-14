@@ -1905,8 +1905,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Stripe Payment Routes
   app.get('/api/billing/tiers', async (req, res) => {
     try {
-      const { stripeService } = await import('./stripeService');
-      res.json(stripeService.SUBSCRIPTION_TIERS);
+      const { SUBSCRIPTION_TIERS } = await import('./stripeService');
+      res.json(SUBSCRIPTION_TIERS);
     } catch (error) {
       console.error('Error fetching subscription tiers:', error);
       res.status(500).json({ error: 'Failed to fetch subscription tiers' });
@@ -2006,7 +2006,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const stripe = (await import('stripe')).default;
       const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY!, {
-        apiVersion: '2023-10-16',
+        apiVersion: '2025-05-28.basil',
       });
       
       const event = stripeInstance.webhooks.constructEvent(

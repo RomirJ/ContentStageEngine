@@ -12,6 +12,7 @@ import Monetization from "@/pages/Monetization";
 import Settings from "@/pages/Settings";
 import ShortsGenerator from "@/pages/ShortsGenerator";
 import Engagement from "@/pages/Engagement";
+import Billing from "@/pages/Billing";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -30,6 +31,7 @@ function Router() {
           <Route path="/monetization" component={Monetization} />
           <Route path="/engagement" component={Engagement} />
           <Route path="/shorts" component={ShortsGenerator} />
+          <Route path="/billing" component={Billing} />
           <Route path="/settings" component={Settings} />
         </>
       )}
