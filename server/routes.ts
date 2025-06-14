@@ -349,10 +349,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Monetization routes
+  // Monetization routes - only real data, no fallbacks
   app.get('/api/monetization/dashboard', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      
+      // Check if user has connected social accounts with revenue tracking
+      const accounts = await storage.getUserSocialAccounts(userId);
+      const revenueEnabledAccounts = accounts.filter(acc => 
+        acc.platform === 'youtube' || acc.platform === 'tiktok' || acc.platform === 'instagram'
+      );
+      
+      if (revenueEnabledAccounts.length === 0) {
+        return res.status(200).json({
+          hasRevenueAccounts: false,
+          message: 'Connect YouTube, TikTok, or Instagram accounts to track revenue'
+        });
+      }
       
       const { monetizationService } = await import('./monetizationService');
       const dashboard = await monetizationService.getMonetizationDashboard(userId);
@@ -368,6 +381,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const { days = 30 } = req.query;
+      
+      // Check if user has connected revenue-enabled accounts
+      const accounts = await storage.getUserSocialAccounts(userId);
+      const revenueEnabledAccounts = accounts.filter(acc => 
+        acc.platform === 'youtube' || acc.platform === 'tiktok' || acc.platform === 'instagram'
+      );
+      
+      if (revenueEnabledAccounts.length === 0) {
+        return res.status(200).json({
+          totalRevenue: 0,
+          platformBreakdown: [],
+          topEarningPosts: [],
+          projectedMonthly: 0,
+          message: 'No revenue accounts connected. Connect YouTube, TikTok, or Instagram to track earnings.'
+        });
+      }
       
       const { monetizationService } = await import('./monetizationService');
       const report = await monetizationService.getRevenueReport(userId, parseInt(days as string));
