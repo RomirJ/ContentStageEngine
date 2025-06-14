@@ -12,7 +12,8 @@ import {
   Settings,
   LogOut,
   DollarSign,
-  MessageCircle
+  MessageCircle,
+  CreditCard
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -30,6 +31,7 @@ export default function Sidebar() {
     { icon: BarChart3, label: "Analytics", href: "/analytics" },
     { icon: MessageCircle, label: "Engagement", href: "/engagement" },
     { icon: DollarSign, label: "Monetization", href: "/monetization" },
+    { icon: CreditCard, label: "Billing", href: "/billing" },
     { icon: Share2, label: "Social Accounts", href: "/accounts" },
   ];
 
