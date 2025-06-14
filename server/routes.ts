@@ -1902,6 +1902,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Stripe Payment Routes
+  app.get('/api/billing/tiers', async (req, res) => {
+    try {
+      const { stripeService } = await import('./stripeService');
+      res.json(stripeService.SUBSCRIPTION_TIERS);
+    } catch (error) {
+      console.error('Error fetching subscription tiers:', error);
+      res.status(500).json({ error: 'Failed to fetch subscription tiers' });
+    }
+  });
+
+  app.post('/api/billing/create-subscription', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { priceId } = req.body;
+      
+      if (!priceId) {
+        return res.status(400).json({ error: 'Price ID is required' });
+      }
+      
+      const { stripeService } = await import('./stripeService');
+      const result = await stripeService.createSubscription(userId, priceId);
+      
+      res.json(result);
+    } catch (error) {
+      console.error('Error creating subscription:', error);
+      res.status(500).json({ error: 'Failed to create subscription' });
+    }
+  });
+
+  app.post('/api/billing/cancel-subscription', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { immediate } = req.body;
+      
+      const { stripeService } = await import('./stripeService');
+      await stripeService.cancelSubscription(userId, immediate);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error canceling subscription:', error);
+      res.status(500).json({ error: 'Failed to cancel subscription' });
+    }
+  });
+
+  app.post('/api/billing/update-subscription', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { newPriceId } = req.body;
+      
+      if (!newPriceId) {
+        return res.status(400).json({ error: 'New price ID is required' });
+      }
+      
+      const { stripeService } = await import('./stripeService');
+      await stripeService.updateSubscription(userId, newPriceId);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error updating subscription:', error);
+      res.status(500).json({ error: 'Failed to update subscription' });
+    }
+  });
+
+  app.get('/api/billing/usage', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { month } = req.query;
+      
+      const { stripeService } = await import('./stripeService');
+      const usage = await stripeService.getUsage(userId, month as string);
+      
+      res.json(usage);
+    } catch (error) {
+      console.error('Error fetching usage:', error);
+      res.status(500).json({ error: 'Failed to fetch usage' });
+    }
+  });
+
+  app.get('/api/billing/limits', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const { stripeService } = await import('./stripeService');
+      const limits = await stripeService.checkLimits(userId);
+      
+      res.json(limits);
+    } catch (error) {
+      console.error('Error checking limits:', error);
+      res.status(500).json({ error: 'Failed to check limits' });
+    }
+  });
+
+  app.post('/api/billing/webhook', async (req, res) => {
+    try {
+      const sig = req.headers['stripe-signature'] as string;
+      const { stripeService } = await import('./stripeService');
+      
+      if (!process.env.STRIPE_WEBHOOK_SECRET) {
+        return res.status(400).json({ error: 'Webhook secret not configured' });
+      }
+      
+      const stripe = (await import('stripe')).default;
+      const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY!, {
+        apiVersion: '2023-10-16',
+      });
+      
+      const event = stripeInstance.webhooks.constructEvent(
+        req.body,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
+      
+      await stripeService.handleWebhook(event);
+      
+      res.json({ received: true });
+    } catch (error) {
+      console.error('Webhook error:', error);
+      res.status(400).json({ error: 'Webhook signature verification failed' });
+    }
+  });
+
   app.get('/api/reports/weekly/download/:fileName', isAuthenticated, async (req: any, res) => {
     try {
       const { fileName } = req.params;

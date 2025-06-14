@@ -32,6 +32,10 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  stripeCustomerId: varchar("stripe_customer_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
+  subscriptionStatus: varchar("subscription_status").default("free"), // free, active, past_due, canceled
+  subscriptionTier: varchar("subscription_tier").default("free"), // free, starter, pro, enterprise
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -203,3 +207,46 @@ export type SocialPost = typeof socialPosts.$inferSelect;
 export type InsertSocialPost = z.infer<typeof insertSocialPostSchema>;
 export type SocialAccount = typeof socialAccounts.$inferSelect;
 export type ScheduledPost = typeof scheduledPosts.$inferSelect;
+
+// Billing tables
+export const subscriptions = pgTable("subscriptions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  stripeSubscriptionId: varchar("stripe_subscription_id").unique().notNull(),
+  stripePriceId: varchar("stripe_price_id").notNull(),
+  status: varchar("status").notNull(), // active, past_due, canceled, unpaid
+  currentPeriodStart: timestamp("current_period_start").notNull(),
+  currentPeriodEnd: timestamp("current_period_end").notNull(),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const invoices = pgTable("invoices", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  stripeInvoiceId: varchar("stripe_invoice_id").unique().notNull(),
+  amount: integer("amount").notNull(), // in cents
+  currency: varchar("currency").default("usd").notNull(),
+  status: varchar("status").notNull(), // paid, open, void, uncollectible
+  paidAt: timestamp("paid_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const usageRecords = pgTable("usage_records", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  month: varchar("month").notNull(), // YYYY-MM format
+  uploadsCount: integer("uploads_count").default(0),
+  transcriptionMinutes: integer("transcription_minutes").default(0),
+  segmentsGenerated: integer("segments_generated").default(0),
+  postsScheduled: integer("posts_scheduled").default(0),
+  storageUsed: integer("storage_used").default(0), // in MB
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Billing types
+export type Subscription = typeof subscriptions.$inferSelect;
+export type Invoice = typeof invoices.$inferSelect;
+export type UsageRecord = typeof usageRecords.$inferSelect;
