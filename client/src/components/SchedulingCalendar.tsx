@@ -283,6 +283,7 @@ export default function SchedulingCalendar({ uploadId }: SchedulingCalendarProps
                     <SelectItem value="linkedin">LinkedIn</SelectItem>
                     <SelectItem value="instagram">Instagram</SelectItem>
                     <SelectItem value="tiktok">TikTok</SelectItem>
+                    <SelectItem value="youtube">YouTube</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -299,18 +300,11 @@ export default function SchedulingCalendar({ uploadId }: SchedulingCalendarProps
 
             <div>
               <Label htmlFor="time">Time</Label>
-              <Select value={scheduledTime} onValueChange={setScheduledTime}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {generateOptimalTimes().map((timeOption) => (
-                    <SelectItem key={timeOption.time} value={timeOption.time}>
-                      {timeOption.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                type="time"
+                value={scheduledTime}
+                onChange={(e) => setScheduledTime(e.target.value)}
+              />
             </div>
 
             {!selectedPost && (

@@ -50,14 +50,14 @@ export default function Sidebar() {
         {navigationItems.map((item) => {
           const Icon = item.icon;
           return (
-            <a
+            <Link
               key={item.label}
               href={item.href}
               className={`sidebar-nav-item ${item.active ? 'active' : ''}`}
             >
               <Icon className="w-5 h-5 mr-3" />
               {item.label}
-            </a>
+            </Link>
           );
         })}
       </nav>
