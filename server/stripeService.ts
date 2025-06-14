@@ -114,6 +114,15 @@ export class StripeService {
 
   async createSubscription(userId: string, priceId: string): Promise<{ clientSecret: string; subscriptionId: string }> {
     try {
+      // Validate price ID exists in our tiers
+      const validPriceIds = Object.values(SUBSCRIPTION_TIERS)
+        .map(tier => tier.priceId)
+        .filter(id => id !== null);
+      
+      if (!validPriceIds.includes(priceId)) {
+        throw new Error(`Invalid price ID: ${priceId}. Please create the price in your Stripe dashboard first.`);
+      }
+
       const [user] = await db.select().from(users).where(eq(users.id, userId));
       if (!user) {
         throw new Error('User not found');
@@ -122,6 +131,13 @@ export class StripeService {
       let customerId = user.stripeCustomerId;
       if (!customerId) {
         customerId = await this.createCustomer(userId, user.email!, `${user.firstName} ${user.lastName}`.trim());
+      }
+
+      // Verify price exists in Stripe before creating subscription
+      try {
+        await stripe.prices.retrieve(priceId);
+      } catch (error) {
+        throw new Error(`Price ID ${priceId} does not exist in Stripe. Please create it in your Stripe dashboard.`);
       }
 
       const subscription = await stripe.subscriptions.create({

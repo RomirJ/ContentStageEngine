@@ -117,22 +117,10 @@ class TwitterRevenueTracker {
   async fetchSuperFollowsData(account: SocialAccount, tweetIds: string[]): Promise<RevenueData[]> {
     console.log(`[TwitterRevenueTracker] Fetching Super Follows and Tip Jar data for ${tweetIds.length} tweets`);
     
-    // Twitter monetization includes: Super Follows, Tip Jar, Spaces subscriptions, Creator Ads Revenue Sharing
-    const mockData: RevenueData[] = tweetIds.map(tweetId => ({
-      postId: tweetId,
-      platform: 'twitter',
-      date: new Date(),
-      views: Math.floor(Math.random() * 500000) + 5000,
-      cpm: parseFloat((Math.random() * 1.5 + 0.3).toFixed(2)),
-      rpm: parseFloat((Math.random() * 0.8 + 0.2).toFixed(2)),
-      earnings: parseFloat((Math.random() * 75 + 5).toFixed(2)),
-      adRevenue: parseFloat((Math.random() * 40 + 2).toFixed(2)), // Creator Ads Revenue Sharing
-      sponsorshipRevenue: 0,
-      affiliateRevenue: parseFloat((Math.random() * 25).toFixed(2)),
-      merchRevenue: parseFloat((Math.random() * 10).toFixed(2)) // Tips and Super Follows
-    }));
-
-    return mockData;
+    // Note: This requires Twitter API monetization endpoints access
+    // Return empty data until real Twitter Creator Revenue API is connected
+    console.log('Twitter Creator Revenue API not connected. Connect your Twitter Creator account to view revenue data.');
+    return [];
   }
 
   async getCreatorEarnings(userId: string, days: number = 30): Promise<{
@@ -142,13 +130,14 @@ class TwitterRevenueTracker {
     adsRevenue: number;
     totalRevenue: number;
   }> {
-    // Simulate Twitter Creator monetization API
+    // Note: This requires Twitter Creator Revenue API access
+    // Connect your Twitter Creator account to view real revenue data
     return {
-      superFollowsRevenue: 245.50,
-      tipJarRevenue: 89.25,
-      spacesRevenue: 156.75,
-      adsRevenue: 312.40,
-      totalRevenue: 803.90
+      superFollowsRevenue: 0,
+      tipJarRevenue: 0,
+      spacesRevenue: 0,
+      adsRevenue: 0,
+      totalRevenue: 0
     };
   }
 }
