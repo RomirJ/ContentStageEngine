@@ -230,6 +230,7 @@ class UploadService {
       await storage.createUpload({
         userId: 'current_user', // Would get from auth context
         filename: chunkInfo.filename,
+        originalName: chunkInfo.filename,
         filePath: finalPath,
         fileSize: chunkInfo.totalSize,
         mimeType: this.getMimeType(chunkInfo.filename),

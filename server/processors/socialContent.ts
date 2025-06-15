@@ -25,8 +25,9 @@ export async function processSocialContent(uploadId: string) {
     console.log(`Social content generation completed for upload ${uploadId}`);
     
   } catch (error) {
-    console.error(`Social content generation failed for upload ${uploadId}:`, error);
-    throw new Error(`Social content generation failed: ${error.message}`);
+    const err = error as any;
+    console.error(`Social content generation failed for upload ${uploadId}:`, err);
+    throw new Error(`Social content generation failed: ${err.message}`);
   }
 }
 
@@ -66,7 +67,8 @@ async function generateContentForSegment(segment: Segment, platform: string) {
           scheduledFor: null,
         });
       } catch (graphicError) {
-        console.warn(`Quote graphic generation failed for ${platform}:`, graphicError.message);
+        const gErr = graphicError as any;
+        console.warn(`Quote graphic generation failed for ${platform}:`, gErr.message);
       }
     }
 

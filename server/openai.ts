@@ -47,8 +47,9 @@ export async function transcribeAudio(audioFilePath: string): Promise<Transcript
       duration: transcription.duration,
     };
   } catch (error) {
-    console.error('Transcription error:', error);
-    throw new Error(`Failed to transcribe audio: ${error.message}`);
+    const err = error as any;
+    console.error('Transcription error:', err);
+    throw new Error(`Failed to transcribe audio: ${err.message}`);
   }
 }
 
@@ -93,17 +94,19 @@ Respond with JSON in this format:
       temperature: 0.3,
     });
 
-    const result = JSON.parse(response.choices[0].message.content);
+    const content = response.choices[0].message.content || '{}';
+    const result = JSON.parse(content);
     return result.segments || [];
   } catch (error) {
-    console.error('Segmentation error:', error);
-    throw new Error(`Failed to generate segments: ${error.message}`);
+    const err = error as any;
+    console.error('Segmentation error:', err);
+    throw new Error(`Failed to generate segments: ${err.message}`);
   }
 }
 
 export async function generateSocialContent(segment: SegmentResult, platform: string): Promise<string> {
   try {
-    const platformPrompts = {
+    const platformPrompts: Record<string, string> = {
       twitter: "Create a compelling Twitter thread (2-3 tweets) based on this content. Make it engaging and shareable.",
       linkedin: "Create a professional LinkedIn post that provides value and encourages engagement.",
       instagram: "Create an Instagram caption that's engaging and includes relevant hashtags.",
@@ -135,8 +138,9 @@ Create content that captures the key insight and makes it engaging for ${platfor
 
     return response.choices[0].message.content || '';
   } catch (error) {
-    console.error('Social content generation error:', error);
-    throw new Error(`Failed to generate social content: ${error.message}`);
+    const err = error as any;
+    console.error('Social content generation error:', err);
+    throw new Error(`Failed to generate social content: ${err.message}`);
   }
 }
 
@@ -167,7 +171,8 @@ Return just the quote text that would work well on a visual quote graphic - keep
 
     return response.choices[0].message.content?.trim() || segment.title;
   } catch (error) {
-    console.error('Quote generation error:', error);
-    throw new Error(`Failed to generate quote: ${error.message}`);
+    const err = error as any;
+    console.error('Quote generation error:', err);
+    throw new Error(`Failed to generate quote: ${err.message}`);
   }
 }
