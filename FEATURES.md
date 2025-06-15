@@ -93,6 +93,7 @@
 ### ✅ Platform Integration
 - **OAuth 2.0/1.0a token management** with auto-refresh
 - **Multi-platform publishing** to 5+ networks
+- **New X (Twitter) publishing flow** with chunked upload and thread support
 - **Platform-specific formatting** and constraints
 - **Error handling** with retry mechanisms
 
