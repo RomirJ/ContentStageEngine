@@ -117,7 +117,7 @@ export class StripeService {
       // Validate price ID exists in our tiers
       const validPriceIds = Object.values(SUBSCRIPTION_TIERS)
         .map(tier => tier.priceId)
-        .filter((id): id is NonNullable<typeof id> => id !== null);
+        .filter((id): id is NonNullable<typeof id> => id !== null) as string[];
       
       if (!validPriceIds.includes(priceId)) {
         throw new Error(`Invalid price ID: ${priceId}. Please create the price in your Stripe dashboard first.`);

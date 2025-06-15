@@ -57,6 +57,12 @@ export interface IStorage {
   createSocialAccount(account: any): Promise<SocialAccount>;
   updateSocialAccountStatus(id: string, isActive: boolean): Promise<void>;
   updateSocialAccountToken(id: string, tokenData: any): Promise<void>;
+  updateSocialAccount(id: string, data: any): Promise<void>;
+  getSocialAccountByUserAndPlatform(
+    userId: string,
+    platform: string
+  ): Promise<SocialAccount | undefined>;
+  getAllSocialAccounts(): Promise<SocialAccount[]>;
   deleteSocialAccount(id: string): Promise<void>;
   getAllUsers(): Promise<User[]>;
   
@@ -377,6 +383,30 @@ export class DatabaseStorage implements IStorage {
       .update(socialAccounts)
       .set(tokenData)
       .where(eq(socialAccounts.id, id));
+  }
+
+  async updateSocialAccount(id: string, data: any): Promise<void> {
+    await db
+      .update(socialAccounts)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(socialAccounts.id, id));
+  }
+
+  async getSocialAccountByUserAndPlatform(
+    userId: string,
+    platform: string
+  ): Promise<SocialAccount | undefined> {
+    const [account] = await db
+      .select()
+      .from(socialAccounts)
+      .where(
+        and(eq(socialAccounts.userId, userId), eq(socialAccounts.platform, platform))
+      );
+    return account;
+  }
+
+  async getAllSocialAccounts(): Promise<SocialAccount[]> {
+    return await db.select().from(socialAccounts);
   }
 
   async deleteSocialAccount(id: string): Promise<void> {

@@ -33,7 +33,8 @@ export async function processSegmentation(uploadId: string, transcriptText: stri
     return segments;
     
   } catch (error) {
-    console.error(`Segmentation failed for upload ${uploadId}:`, error);
-    throw new Error(`Segmentation failed: ${error.message}`);
+    const err = error as any;
+    console.error(`Segmentation failed for upload ${uploadId}:`, err);
+    throw new Error(`Segmentation failed: ${err.message}`);
   }
 }

@@ -249,7 +249,7 @@ export class OAuthService {
     }
 
     const now = new Date();
-    const expiresAt = new Date(account.expiresAt);
+    const expiresAt = new Date(account.expiresAt || 0);
 
     // If token expires within 5 minutes, try to refresh
     const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
@@ -260,7 +260,7 @@ export class OAuthService {
       return refreshedToken ? refreshedToken.accessToken : null;
     }
 
-    return this.decryptToken(account.accessToken);
+    return this.decryptToken(account.accessToken || '');
   }
 
   private scheduleExpiryAlert(userId: string, platform: string, expiresAt: Date): void {
@@ -304,9 +304,9 @@ export class OAuthService {
       const checkTime = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
 
       for (const account of accounts) {
-        if (account.status !== 'active') continue;
+        if (!account.isActive) continue;
 
-        const expiresAt = new Date(account.expiresAt);
+        const expiresAt = new Date(account.expiresAt || 0);
         if (expiresAt <= checkTime) {
           console.log(`[OAuthService] Proactively refreshing token for ${account.platform}`);
           await this.refreshToken(account.userId, account.platform);

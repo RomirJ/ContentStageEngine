@@ -20,8 +20,9 @@ export async function processClipGeneration(segments: Segment[]) {
     console.log(`Clip generation completed for all segments`);
     
   } catch (error) {
-    console.error(`Clip generation failed:`, error);
-    throw new Error(`Clip generation failed: ${error.message}`);
+    const err = error as any;
+    console.error(`Clip generation failed:`, err);
+    throw new Error(`Clip generation failed: ${err.message}`);
   }
 }
 
@@ -70,7 +71,8 @@ async function generateClipsForSegment(segment: Segment) {
         console.log(`Generated ${clipType.type} clip for ${clipType.platform}`);
         
       } catch (error) {
-        console.error(`Failed to generate ${clipType.type} for ${clipType.platform}:`, error);
+        const err = error as any;
+        console.error(`Failed to generate ${clipType.type} for ${clipType.platform}:`, err);
         
         // Create failed clip record
         await storage.createClip({
@@ -79,7 +81,7 @@ async function generateClipsForSegment(segment: Segment) {
           content: '',
           metadata: JSON.stringify({
             platform: clipType.platform,
-            error: error.message,
+            error: err.message,
           }),
           status: 'failed',
         });
@@ -89,8 +91,9 @@ async function generateClipsForSegment(segment: Segment) {
     console.log(`Completed clip generation for segment ${segment.id}`);
     
   } catch (error) {
-    console.error(`Failed to generate clips for segment ${segment.id}:`, error);
-    throw error;
+    const err = error as any;
+    console.error(`Failed to generate clips for segment ${segment.id}:`, err);
+    throw err;
   }
 }
 
